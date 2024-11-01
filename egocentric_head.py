@@ -4,12 +4,12 @@ import matplotlib.pyplot as plt
 import math
 from scipy.interpolate import interp1d
 import matplotlib
-import os
 from matplotlib.backends.backend_pdf import PdfPages
+import os
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 
-from utils import set_to_nan_based_on_likelihood, plot_ebc,filter_and_interpolate
+from utils import set_to_nan_based_on_likelihood, plot_ebc_head,filter_and_interpolate
 
 def ebc_bins(dlc_df, bin_size_angle=12,bin_size_distance=160): 
     top_left_corner = (dlc_df.iloc[0]['top_left_corner x'], dlc_df.iloc[0]['top_left_corner y'])
@@ -57,28 +57,27 @@ def lineLineIntersection(A, B, C, D):
         y = (a1*c2 - a2*c1)/determinant
         return (x, y)
 
-def calaculate_ebc(dlc_df,center_neck_x,center_neck_y,center_haunch_x,center_haunch_y, ebc_angle_bin_size, ebc_dist_bin_size):
+
+def calaculate_ebc_head(dlc_df,left_drive_x,left_drive_y,right_drive_x,right_dirve_y,ebc_angle_bin_size,ebc_dist_bin_size):
     top_left_corner = (dlc_df.iloc[0]['top_left_corner x'], dlc_df.iloc[0]['top_left_corner y'])
     top_right_corner = (dlc_df.iloc[0]['top_right_corner x'],dlc_df.iloc[0]['top_right_corner y'])
     bottom_left_corner = (dlc_df.iloc[0]['bottom_left_corner x'], dlc_df.iloc[0]['bottom_left_corner y'])
     bottom_right_corner = (dlc_df.iloc[0]['bottom_right_corner x'], dlc_df.iloc[0]['bottom_right_corner y'])
-    distance_bins,angle_bins = ebc_bins(dlc_df, ebc_angle_bin_size, ebc_dist_bin_size)
+    distance_bins,angle_bins = ebc_bins(dlc_df,ebc_angle_bin_size,ebc_dist_bin_size)
     ebc_data_final = []
-    for i in range(len(center_neck_x)):
-        print(i, len(center_neck_x), "egocentric body") #TO VIEW PROGRESS
+    for i in range(len(left_drive_x)):
+        print(i, len(left_drive_x), "egocentric head") #TO VIEW PROGRESS
         ebc_bins_total = np.zeros((len(distance_bins),len(angle_bins)))
         for angle in range(0,360,3):
-            #center_neck_pos = (frame['center_neck_x'],frame['center_neck_y'])
-            #center_haunch_pos = (frame['center_haunch_x'],frame['center_haunch_y'])
-            center_neck_pos = (center_neck_x[i],center_neck_y[i])
-            center_haunch_pos = (center_haunch_x[i],center_haunch_y[i]) 
+            center_neck_pos = (left_drive_x[i],left_drive_y[i])
+            center_haunch_pos = (right_drive_x[i],right_dirve_y[i]) 
             center_neck_pos = rotate(center_haunch_pos,center_neck_pos,angle=math.radians(-1*angle))
             body_angle_radian_frame = math.atan2(center_haunch_pos[1]-center_neck_pos[1],center_haunch_pos[0]-center_neck_pos[0])
+
             body_angle_deg_frame = math.degrees(body_angle_radian_frame)
 
             if body_angle_deg_frame<0:
                 body_angle_deg_frame = 360+body_angle_deg_frame
-
             
 
             if(body_angle_deg_frame==0):
@@ -163,10 +162,10 @@ def calaculate_ebc(dlc_df,center_neck_x,center_neck_y,center_haunch_x,center_hau
         ebc_data_final.append(ebc_bins_total)
     return np.array(ebc_data_final)
 
-def egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file,speed_threshold, ebc_angle_bin_size,ebc_dist_bin_size):
+def egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file, speed_threshold, ebc_angle_bin_size,ebc_dist_bin_size):
 
-    columns_of_interest = ['center_neck', 'center_haunch', 'time']
-    
+    columns_of_interest = ['left_drive','right_drive', 'time']
+
     # Adding timestamps to dlc file and only considering columns of interest
     dlc_df['time'] = np.arange(len(dlc_df))/fps
 
@@ -175,19 +174,22 @@ def egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_wid
 
     model_data_df = model_data_df[model_data_df['speed']>speed_threshold]
 
-    center_neck_x = list(model_data_df['center_neck x'])
-    center_neck_y = list(model_data_df['center_neck y'])
-    center_haunch_x = list(model_data_df['center_haunch x'])
-    center_haunch_y = list(model_data_df['center_haunch y'])
-    
-    egocentric_file = file[:-3]+'ebc_body_data'
+    #model_data_df = model_data_df.dropna()
+
+    center_neck_x = list(model_data_df['left_drive x'])
+    center_neck_y = list(model_data_df['left_drive y'])
+    center_haunch_x = list(model_data_df['right_drive x'])
+    center_haunch_y = list(model_data_df['right_drive y'])
+
+    egocentric_file = file[:-3]+'ebc_head_data'
     if os.path.exists(egocentric_file+'.npy'):
         ebc_data = np.load(egocentric_file+'.npy')
     else:
-        ebc_data = calaculate_ebc(dlc_df, center_neck_x,center_neck_y,center_haunch_x,center_haunch_y, ebc_angle_bin_size, ebc_dist_bin_size)
+        ebc_data = calaculate_ebc_head(dlc_df, center_neck_x,center_neck_y,center_haunch_x,center_haunch_y,ebc_angle_bin_size,ebc_dist_bin_size)
         np.save(egocentric_file,np.array(ebc_data))
-
-    distance_bins,angle_bins = ebc_bins(dlc_df, ebc_angle_bin_size, ebc_dist_bin_size)
+    
+    
+    distance_bins,angle_bins = ebc_bins(dlc_df,ebc_angle_bin_size,ebc_dist_bin_size)
 
     ebc_data_avg = np.sum(ebc_data,axis=0)
     rbins = distance_bins.copy()
@@ -196,13 +198,12 @@ def egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_wid
     model_data_df['egocentric'] = list(ebc_data)
 
     cell_numbers = phy_df.index
-    
+
+    spike_data_head = []
+    max_bins = []
 
     ebc_plot_data = []
     ebc_plot_data_binary = []
-
-    spike_data_body = []
-    max_bins = []
 
     for i in cell_numbers:
         spike_times = phy_df.loc[i]['spikeT']
@@ -218,23 +219,22 @@ def egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_wid
 
         sp_count_ind = [i for i in sp_count_ind if i in model_data_df.index]
 
-        #grouping egocentric data based on spikes
         cell_spikes_egocentric = model_data_df['egocentric'].loc[sp_count_ind]  
 
         cell_spikes_avg = np.sum(cell_spikes_egocentric,axis = 0)
         cell_spikes_avg = np.divide(cell_spikes_avg,ebc_data_avg)
-        
+
         cell_spikes_avg[np.isnan(cell_spikes_avg)] = 0
         cell_spikes_avg = np.multiply(cell_spikes_avg, fps)
 
         ebc_plot_data.append(cell_spikes_avg)
-        
+
         arr = np.zeros(len(model_t))
 
         # Use np.add.at for efficient indexing
         np.add.at(arr, sp_count_ind, 1)
 
-        spike_data_body.append(arr)
+        spike_data_head.append(arr)
 
         #75% threshold    
         max_idx = np.unravel_index(np.argmax(cell_spikes_avg, axis=None), cell_spikes_avg.shape)
@@ -252,24 +252,25 @@ def egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_wid
 
         max_bins.append([max_angle,max_radius])
 
+    
     plots = []
-    pdf_file = file[:-3]+'_ebc_bodyPlots.pdf'
+    pdf_file = file[:-3]+'_ebc_headPlots.pdf'
     pp = PdfPages(pdf_file)
     pixels_per_cm = (dlc_df.iloc[0]['top_right_corner x'] - dlc_df.iloc[0]['top_left_corner x']) / 60
 
-
     for i in range(len(ebc_plot_data)):
-        fig = plot_ebc(ebc_plot_data[i],i, distance_bins, ebc_angle_bin_size, pixels_per_cm)
+        fig = plot_ebc_head(ebc_plot_data[i],i, distance_bins,ebc_angle_bin_size, pixels_per_cm)
         plots.append(fig)
         pp.savefig(fig)
 
     pp.close()
-
-    spike_data_body = np.array(spike_data_body)
-
-    np.save('spike_data_body',spike_data_body)
-
-    np.save('egocentric_data_body',np.array(ebc_data))
     
-    return ebc_plot_data, distance_bins, ebc_plot_data_binary, max_bins
+    spike_data_head = np.array(spike_data_head)
+
+    np.save('spike_data_head',spike_data_head)
+
+    np.save('egocentric_data_head_4x',np.array(ebc_data))
+
+    return ebc_plot_data, distance_bins,ebc_plot_data_binary, max_bins
     
+

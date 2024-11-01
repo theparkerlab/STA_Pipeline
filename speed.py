@@ -1,4 +1,4 @@
-def speedPlots(dlc_df, phy_df):
+def speedPlots(dlc_df, phy_df, file):
     import pandas as pd
     import numpy as np
     import matplotlib.pyplot as plt
@@ -6,6 +6,8 @@ def speedPlots(dlc_df, phy_df):
     from scipy import stats
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib
+    matplotlib.rcParams['pdf.fonttype'] = 42
+    matplotlib.rcParams['ps.fonttype'] = 42
 
     fps = 59.99
     model_dt = 1/59.99  # Frame duration in seconds
@@ -99,8 +101,9 @@ def speedPlots(dlc_df, phy_df):
             standard_errors.append(std_y / np.sqrt(len(y_values)))
 
             average_firing_rates = pd.Series(average_firing_rates).interpolate().to_list() #interpolate from NaN
-
             start += bI
+
+        standard_errors = pd.Series(standard_errors).interpolate().to_list() #interpolate from NaN
 
         return average_firing_rates, standard_deviations, standard_errors
     
@@ -121,9 +124,16 @@ def speedPlots(dlc_df, phy_df):
     timeInSeconds = np.arange(0,model_t[-1],0.5)
 
     fig_list = []
+    velocity_list = []
+    spike_list = []
+    spike_avg_list = []
+    std_error_lower = []
+    std_error_upper = []
+    pdf_file = file[:-3]+'_speedPlots.pdf'
+    pp = PdfPages(pdf_file)
 
-    for i in range(0, len(phy_df.index)):
-        firing_rate = calcFiringRate(i, 0.5, timeInSeconds)
+    for n in range(0, len(phy_df.index)):
+        firing_rate = calcFiringRate(n, 0.5, timeInSeconds)
         final_average_firing_rates, std_list, std_errors = calcAverageFiringRates(firing_rate, 5, adjustedVelocity)
 
 
@@ -148,6 +158,8 @@ def speedPlots(dlc_df, phy_df):
 
         ax.set_xlabel("Time (s)")
         ax.legend(handles=[plot_firing_rate, plot_velocity])
+        velocity_list.append(adjustedVelocity)
+        spike_list.append(firing_rate)
 
         ax=axs[2]
         ax.plot(np.arange(0, max(adjustedVelocity), 5), final_average_firing_rates,'k')
@@ -160,9 +172,12 @@ def speedPlots(dlc_df, phy_df):
         ax.set_xlabel("Velocity")
         ax.set_ylabel("Firing Rate")
         ax.set_ylim(bottom=0)
+        spike_avg_list.append(final_average_firing_rates)
+        std_error_lower.append(lower_graphed_firing_rates)
+        std_error_upper.append(upper_graphed_firing_rates)
 
 
-        neuron_number_official = phy_df.index[i]
+        neuron_number_official = phy_df.index[n]
 
         velocityCleaned = np.array(adjustedVelocity)[~np.isnan(adjustedVelocity)]
         firing_rate_cleaned = np.array(firing_rate)[~np.isnan(adjustedVelocity)]
@@ -172,6 +187,7 @@ def speedPlots(dlc_df, phy_df):
         fig.suptitle('Neuron %s (r=%0.3f, p=%s)' % (neuron_number_official, rcoeff, str(pval)))
         fig.tight_layout()
         fig_list.append(fig)
-        print("Created Figure")
+        pp.savefig(fig)
 
-    return fig_list
+    pp.close()
+    return velocity_list, spike_list, spike_avg_list, std_error_lower, std_error_upper, timeInSeconds
