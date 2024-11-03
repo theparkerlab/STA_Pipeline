@@ -1,3 +1,6 @@
+'''
+performs a bootstrap analysis on egocentric head-centered data, calculating metrics such as mean resultant length (MRL), mean angle, and preferred firing distance for neural activity based on head orientation. It processes spike data, computes distance and angle bins, fits a Weibull distribution to determine the preferred distance, and saves MRL thresholds for further statistical validation.
+'''
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,11 +17,33 @@ from Egocentric import *
 from scipy.stats import weibull_min
 
 def calculate_mr(firing_rates, n, m):
+    """
+    Calculate the mean resultant vector (MR) for given firing rates.
+
+    Args:
+        firing_rates (ndarray): Array of firing rate data.
+        n (int): Number of orientation bins.
+        m (int): Number of distance bins.
+
+    Returns:
+        complex: Mean resultant vector (MR), capturing direction and strength of orientation.
+    """
     theta = np.linspace(0, 2 * np.pi, n, endpoint=False)
     MR = (1 / (n * m)) * np.sum(firing_rates * np.exp(1j * theta[:, None]), axis=(0, 1))
     return MR
 
 def shuffle_spike_train(spike_times, recording_duration, min_shift=30):
+    """
+    Shuffle spike train data by randomly shifting spike times within the recording duration.
+
+    Args:
+        spike_times (array-like): Original spike times to be shuffled.
+        recording_duration (float): Total recording duration.
+        min_shift (int): Minimum allowable shift interval (default is 30).
+
+    Returns:
+        ndarray: Shuffled spike times, shifted by a random interval.
+    """
     # Determine maximum shift based on recording duration
     max_shift = recording_duration - min_shift
     
@@ -31,6 +56,25 @@ def shuffle_spike_train(spike_times, recording_duration, min_shift=30):
     return shuffled_times
 
 def bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file,speed_threshold, ebc_angle_bin_size,ebc_dist_bin_size):
+    """
+    Perform bootstrap analysis on egocentric head-centered EBC data and calculate various metrics.
+
+    Args:
+        dlc_df (DataFrame): Dataframe containing body coordinate and timestamp data.
+        phy_df (DataFrame): Dataframe with spike time data for each cell.
+        fps (int): Frames per second of video recording.
+        likelihood_threshold (float): Threshold to filter out low-likelihood data.
+        model_dt (float): Time step for interpolating model data.
+        bin_width (int): Width of bins for analysis.
+        file (str): Filename for saving results.
+        speed_threshold (float): Minimum speed threshold for filtering.
+        ebc_angle_bin_size (int): Size of angle bins in degrees.
+        ebc_dist_bin_size (int): Size of distance bins.
+
+    Returns:
+        tuple: Contains MRLs, MRL thresholds, mean angles, EBC plot data, distance bins, binary plot data,
+               max bins, and preferred distances for further analysis.
+    """
     columns_of_interest = ['left_drive','right_drive', 'time']
 
     # Adding timestamps to dlc file and only considering columns of interest

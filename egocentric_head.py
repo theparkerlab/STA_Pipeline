@@ -1,3 +1,6 @@
+'''
+computes egocentric head-centered data by calculating egocentric boundary cell (EBC) bins and spike data related to an animal’s head orientation. It filters, interpolates, and organizes the data by distance and angle bins, generating visualizations and saving the processed data as .npy and .pdf files for further analysis.
+'''
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,7 +14,18 @@ matplotlib.rcParams['ps.fonttype'] = 42
 
 from utils import set_to_nan_based_on_likelihood, plot_ebc_head,filter_and_interpolate
 
-def ebc_bins(dlc_df, bin_size_angle=12,bin_size_distance=160): 
+def ebc_bins(dlc_df, bin_size_angle=12,bin_size_distance=160):
+    """
+    Calculate angle and distance bins for egocentric boundary cell (EBC) analysis.
+    
+    Args:
+        dlc_df (DataFrame): Dataframe containing corner coordinates of the arena.
+        bin_size_angle (int): Size of angle bins in degrees.
+        bin_size_distance (int): Size of distance bins.
+
+    Returns:
+        tuple: Distance and angle bins as numpy arrays.
+    """ 
     top_left_corner = (dlc_df.iloc[0]['top_left_corner x'], dlc_df.iloc[0]['top_left_corner y'])
     top_right_corner = (dlc_df.iloc[0]['top_right_corner x'],dlc_df.iloc[0]['top_right_corner y'])
     bottom_left_corner = (dlc_df.iloc[0]['bottom_left_corner x'], dlc_df.iloc[0]['bottom_left_corner y'])
@@ -26,7 +40,13 @@ def rotate(origin, point, angle):
     """
     Rotate a point counterclockwise by a given angle around a given origin.
 
-    The angle should be given in radians.
+    Args:
+        origin (tuple): Origin point for rotation (x, y).
+        point (tuple): Point to rotate (x, y).
+        angle (float): Angle in radians for rotation.
+
+    Returns:
+        tuple: Coordinates of the rotated point.
     """
     ox, oy = origin
     px, py = point
@@ -36,6 +56,16 @@ def rotate(origin, point, angle):
     return qx, qy
 
 def lineLineIntersection(A, B, C, D):
+    """
+    Find the intersection point of two lines, AB and CD.
+
+    Args:
+        A, B (tuple): Endpoints of the first line.
+        C, D (tuple): Endpoints of the second line.
+
+    Returns:
+        tuple or str: Intersection point (x, y) or 'parallel' if lines are parallel.
+    """
     # Line AB represented as a1x + b1y = c1
     a1 = B[1] - A[1]
     b1 = A[0] - B[0]
@@ -59,6 +89,19 @@ def lineLineIntersection(A, B, C, D):
 
 
 def calaculate_ebc_head(dlc_df,left_drive_x,left_drive_y,right_drive_x,right_dirve_y,ebc_angle_bin_size,ebc_dist_bin_size):
+    """
+    Calculate EBC data for each frame based on head orientation and arena boundaries.
+
+    Args:
+        dlc_df (DataFrame): Dataframe containing corner coordinates of the arena.
+        left_drive_x, left_drive_y (list): X, Y coordinates for the left side of head.
+        right_drive_x, right_dirve_y (list): X, Y coordinates for the right side of head.
+        ebc_angle_bin_size (int): Size of angle bins in degrees.
+        ebc_dist_bin_size (int): Size of distance bins.
+
+    Returns:
+        ndarray: Array of EBC data for each frame.
+    """
     top_left_corner = (dlc_df.iloc[0]['top_left_corner x'], dlc_df.iloc[0]['top_left_corner y'])
     top_right_corner = (dlc_df.iloc[0]['top_right_corner x'],dlc_df.iloc[0]['top_right_corner y'])
     bottom_left_corner = (dlc_df.iloc[0]['bottom_left_corner x'], dlc_df.iloc[0]['bottom_left_corner y'])
@@ -163,6 +206,24 @@ def calaculate_ebc_head(dlc_df,left_drive_x,left_drive_y,right_drive_x,right_dir
     return np.array(ebc_data_final)
 
 def egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file, speed_threshold, ebc_angle_bin_size,ebc_dist_bin_size):
+    """
+    Compute egocentric head-centered (EBC) data and generate plots for head-related spikes.
+
+    Args:
+        dlc_df (DataFrame): Dataframe containing coordinates and timestamps for arena.
+        phy_df (DataFrame): Spike time data for each cell.
+        fps (int): Frames per second of the video.
+        likelihood_threshold (float): Minimum likelihood for data to be considered valid.
+        model_dt (float): Time step for interpolating model data.
+        bin_width (int): Width of the bins.
+        file (str): Filename for saving results.
+        speed_threshold (float): Minimum speed threshold for filtering.
+        ebc_angle_bin_size (int): Size of angle bins in degrees.
+        ebc_dist_bin_size (int): Size of distance bins.
+
+    Returns:
+        tuple: EBC data for plotting, distance bins, binary EBC data, and max bin locations.
+    """
 
     columns_of_interest = ['left_drive','right_drive', 'time']
 

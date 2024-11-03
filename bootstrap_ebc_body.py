@@ -1,3 +1,7 @@
+'''
+performs a bootstrap analysis on egocentric body-centered data to calculate metrics such as mean resultant length (MRL) and preferred distance for firing rates. It processes spike data, calculates orientation and distance bins, and fits a Weibull distribution to identify preferred distances. The results, including thresholded MRL values, are saved for further analysis.
+'''
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,11 +18,33 @@ from Egocentric import *
 from scipy.stats import weibull_min
 
 def calculate_mr(firing_rates, n, m):
+    """
+    Calculate the mean resultant vector (MR) for given firing rates.
+    
+    Args:
+        firing_rates (ndarray): Firing rates data.
+        n (int): Number of orientation bins.
+        m (int): Number of distance bins.
+        
+    Returns:
+        complex: Mean resultant vector (MR).
+    """
     theta = np.linspace(0, 2 * np.pi, n, endpoint=False)
     MR = (1 / (n * m)) * np.sum(firing_rates * np.exp(1j * theta[:, None]), axis=(0, 1))
     return MR
 
 def shuffle_spike_train(spike_times, recording_duration, min_shift=30):
+    """
+    Shuffle spike train by randomly shifting spike times within recording duration.
+    
+    Args:
+        spike_times (array-like): Original spike times.
+        recording_duration (float): Total recording duration.
+        min_shift (int): Minimum shift interval (default 30).
+        
+    Returns:
+        ndarray: Shuffled spike times.
+    """
     # Determine maximum shift based on recording duration
     max_shift = recording_duration - min_shift
     
@@ -31,6 +57,25 @@ def shuffle_spike_train(spike_times, recording_duration, min_shift=30):
     return shuffled_times
 
 def bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file,speed_threshold, ebc_angle_bin_size,ebc_dist_bin_size):
+    """
+    Perform bootstrap analysis on egocentric body-centered EBC data and calculate various metrics.
+    
+    Args:
+        dlc_df (DataFrame): Dataframe containing coordinates and timestamps.
+        phy_df (DataFrame): Dataframe with spike time data for each cell.
+        fps (int): Frames per second of video recording.
+        likelihood_threshold (float): Threshold for filtering likelihood data.
+        model_dt (float): Time step for interpolating model data.
+        bin_width (int): Width of bins for analysis.
+        file (str): Filename to save output data.
+        speed_threshold (float): Minimum speed threshold for data.
+        ebc_angle_bin_size (int): Size of angle bins in degrees.
+        ebc_dist_bin_size (int): Size of distance bins.
+
+    Returns:
+        tuple: Mean resultant lengths (MRLS), thresholds, mean angles, plot data, distance bins,
+               binary plot data, max bins, and preferred distances.
+    """
     columns_of_interest = ['center_neck', 'center_haunch', 'time']
     
     # Adding timestamps to dlc file and only considering columns of interest

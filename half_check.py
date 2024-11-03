@@ -1,3 +1,6 @@
+'''
+conducts a half-check analysis on egocentric head-centered data by splitting the dataset into two halves. Each half is processed to filter, interpolate, and calculate spatially tuned metrics, such as mean resultant lengths (MRLs), mean angles, and preferred distances for each cell's spike data. The results are saved and compared to assess consistency in head-centered egocentric firing patterns across the two data subsets.
+'''
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,6 +19,22 @@ from scipy.stats import weibull_min
 
 
 def process_half(dlc_df_half, columns_of_interest, likelihood_threshold, model_dt, fps, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size):
+    """
+    Processes one half of the dlc DataFrame to filter, interpolate, and calculate egocentric head-centered (EBC) data.
+
+    Args:
+        dlc_df_half (DataFrame): A half of the full dlc DataFrame to process.
+        columns_of_interest (list): List of columns to retain in the filtered data.
+        likelihood_threshold (float): Minimum likelihood threshold for data filtering.
+        model_dt (float): Time step for interpolating data.
+        fps (int): Frames per second of video recording.
+        speed_threshold (float): Minimum speed threshold for filtering.
+        ebc_angle_bin_size (int): Size of angle bins in degrees.
+        ebc_dist_bin_size (int): Size of distance bins.
+
+    Returns:
+        tuple: Processed model DataFrame with egocentric data, and the model time array.
+    """
     # Filter and interpolate
     model_data_df, model_t = filter_and_interpolate(dlc_df_half, columns_of_interest, likelihood_threshold, model_dt, fps)
     
@@ -41,6 +60,19 @@ def process_half(dlc_df_half, columns_of_interest, likelihood_threshold, model_d
     return model_data_df, model_t
 
 def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins):
+    """
+    Calculate mean resultant lengths (MRLs) and preferred distances for each cell's spike data.
+
+    Args:
+        model_data_df (DataFrame): Processed model data with egocentric information.
+        phy_df (DataFrame): DataFrame with spike time data for each cell.
+        cell_numbers (Index): List of cell identifiers.
+        model_t (ndarray): Array of time indices for the model data.
+        abins (ndarray): Angle bins for calculating preferred angles.
+
+    Returns:
+        tuple: MRLs, mean angles, and preferred distances for each cell.
+    """
     ebc_plot_data = []
     n = 120
     m = 27
@@ -94,6 +126,24 @@ def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins):
 
 
 def egocentric_head_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size):
+    """
+    Perform a half-check analysis on egocentric head-centered data by splitting the data and analyzing each half separately.
+
+    Args:
+        dlc_df (DataFrame): DataFrame containing coordinates and timestamps for the body.
+        phy_df (DataFrame): DataFrame with spike time data for each cell.
+        fps (int): Frames per second of video recording.
+        likelihood_threshold (float): Threshold to filter out low-likelihood data.
+        model_dt (float): Time step for interpolating model data.
+        bin_width (int): Width of bins for analysis.
+        file (str): Filename for saving results.
+        speed_threshold (float): Minimum speed threshold for filtering.
+        ebc_angle_bin_size (int): Size of angle bins in degrees.
+        ebc_dist_bin_size (int): Size of distance bins.
+
+    Returns:
+        tuple: MRLs, mean angles, and preferred distances for each half of the data, allowing comparison.
+    """
 
     columns_of_interest = ['left_drive', 'right_drive', 'time']
 
