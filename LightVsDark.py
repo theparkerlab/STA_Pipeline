@@ -48,7 +48,7 @@ def findDir(pattern, path):
 # File/Video Initialization
 root = Tk()
 root.withdraw() 
-path = askdirectory(title='Choose experiment folder', initialdir=r'\\rhea\E') # show an "Open" dialog box and return the path to the selected file
+path = askdirectory(title='Choose experiment folder', initialdir=r'\\rhea\E\ephys') # show an "Open" dialog box and return the path to the selected file
 print('you have selected: ', path)
 
 lightPath = findDir("FM_LIGHT", path)
@@ -76,9 +76,15 @@ likelihood_threshold = 0.95
 model_dt = 1/fps # Frame duration in seconds
 bin_width = 20 #bin width angles
 speed_threshold=0.25
-ebc_angle_bin_size = 3
-ebc_dist_bin_size = 40
-pixels_per_cm = (dlc_df_light.iloc[0]['top_right_corner x'] - dlc_df_light.iloc[0]['top_left_corner x']) / 60
+ebc_angle_bin_size = 6
+ebc_dist_bin_size = 10
+dist_bins = 480 // ebc_dist_bin_size #480 is approximately half the arena length in pixels
+
+pixels_per_cm_light = (dlc_df_light[dlc_df_light['top_right likelihood'] > 0.95]['top_right x'].median() - dlc_df_light[dlc_df_light['top_left likelihood'] > 0.95]['top_left x'].median()) / 60
+print("P/CM LIGHT: " + str(pixels_per_cm_light))
+
+pixels_per_cm_dark = (dlc_df_dark[dlc_df_dark['top_right likelihood'] > 0.95]['top_right x'].median() - dlc_df_dark[dlc_df_dark['top_left likelihood'] > 0.95]['top_left x'].median()) / 60
+print("P/CM DARK: " + str(pixels_per_cm_dark))
 
 head_plot_data_light, head_bin_edges_light = head_direction(dlc_df_light, phy_df_light, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file_light,speed_threshold)
 head_plot_data_dark, head_bin_edges_dark = head_direction(dlc_df_dark, phy_df_dark, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file_dark, speed_threshold)
@@ -92,15 +98,21 @@ place_cell_plots_dark, x_edges_dark, y_edges_dark  = place_cells(dlc_df_dark, ph
 velocity_list_light, spike_list_light, spike_avg_list_light, std_error_lower_light, std_error_upper_light, timeInSeconds_light = speedPlots(dlc_df_light, phy_df_light, dlc_phy_file_light)
 velocity_list_dark, spike_list_dark, spike_avg_list_dark, std_error_lower_dark, std_error_upper_dark, timeInSeconds_dark = speedPlots(dlc_df_dark, phy_df_dark, dlc_phy_file_dark)
 
-head_ebc_plot_data_light, head_distance_bins_light  = egocentric_head(dlc_df_light, phy_df_light, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file_light,speed_threshold,ebc_angle_bin_size,ebc_dist_bin_size)
-head_ebc_plot_data_dark, head_distance_bins_dark  = egocentric_head(dlc_df_dark, phy_df_dark, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file_dark,speed_threshold,ebc_angle_bin_size,ebc_dist_bin_size)
+head_ebc_plot_data_light, head_distance_bins_light, _, _  = egocentric_head(dlc_df_light, phy_df_light, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file_light,speed_threshold,ebc_angle_bin_size,ebc_dist_bin_size, dist_bins)
+head_ebc_plot_data_dark, head_distance_bins_dark, _, _  = egocentric_head(dlc_df_dark, phy_df_dark, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file_dark,speed_threshold,ebc_angle_bin_size,ebc_dist_bin_size, dist_bins)
 
-body_ebc_plot_data_light, body_distance_bins_light = egocentric_body(dlc_df_light, phy_df_light, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file_light,speed_threshold,ebc_angle_bin_size,ebc_dist_bin_size)
-body_ebc_plot_data_dark, body_distance_bins_dark = egocentric_body(dlc_df_dark, phy_df_dark, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file_dark,speed_threshold,ebc_angle_bin_size,ebc_dist_bin_size)
+body_ebc_plot_data_light, body_distance_bins_light, _, _ = egocentric_body(dlc_df_light, phy_df_light, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file_light,speed_threshold,ebc_angle_bin_size,ebc_dist_bin_size, dist_bins)
+body_ebc_plot_data_dark, body_distance_bins_dark, _, _ = egocentric_body(dlc_df_dark, phy_df_dark, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file_dark,speed_threshold,ebc_angle_bin_size,ebc_dist_bin_size, dist_bins)
 
-
-
+head_ebc_plot_data_light = [row[:dist_bins] for row in head_ebc_plot_data_light]
+head_distance_bins_light = head_distance_bins_light[:dist_bins]
+head_ebc_plot_data_dark = [row[:dist_bins] for row in head_ebc_plot_data_dark]
+head_distance_bins_dark = head_distance_bins_dark[:dist_bins]
         
+body_ebc_plot_data_light = [row[:dist_bins] for row in body_ebc_plot_data_light]
+body_distance_bins_light = body_distance_bins_light[:dist_bins]
+body_ebc_plot_data_dark = [row[:dist_bins] for row in body_ebc_plot_data_dark]
+body_distance_bins_dark = body_distance_bins_dark[:dist_bins]
 
 with PdfPages(root_folder + "\LightVsDark.pdf") as pdf:
     
@@ -130,9 +142,9 @@ with PdfPages(root_folder + "\LightVsDark.pdf") as pdf:
         ax2.set_theta_direction(-1)  # Clockwise
 
         #find vmax for each head cell
-        lightMax = head_ebc_plot_data_light[i].max()
-        darkMax = head_ebc_plot_data_dark[i].max()
-        headMax = max(lightMax, darkMax)
+        lightMax = max(max(row) for row in head_ebc_plot_data_light[i])
+        darkMax  = max(max(row) for row in head_ebc_plot_data_dark[i])
+        headMax  = max(lightMax, darkMax)
         
         #ebc head
         ax3 = plt.subplot(3,4,5,projection='polar')
@@ -145,16 +157,16 @@ with PdfPages(root_folder + "\LightVsDark.pdf") as pdf:
         pc = ax3.pcolormesh(A, R, head_ebc_plot_data_light[i], cmap="jet", vmin=0, vmax=headMax)
         ax3.set_theta_direction(1)
         ax3.set_theta_offset(np.pi)
-        ax3.set_thetagrids([0, 45, 90, 135, 180, 225, 270, 315], labels=['90°', '135°', '180°', '225°', '270°', '315°', '0°', '45°'])
-        ax3.set_rticks([0, 200, 400, 600, 800, 1000],labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200/pixels_per_cm)))  # Less radial ticks
+        # ax3.set_thetagrids([0, 45, 90, 135, 180, 225, 270, 315], labels=['90°', '135°', '180°', '225°', '270°', '315°', '0°', '45°'])
+        # ax3.set_rticks([0, 200, 400, 600, 800, 1000],labels=np.floor(np.arange(0, 1000 / pixels_per_cm_light + 1, 200/pixels_per_cm_light)))  # Less radial ticks
         ax3.axis('off')
 
         fig.colorbar(pc)
 
         #find vmax for each body cell
-        lightMax = body_ebc_plot_data_light[i].max()
-        darkMax = body_ebc_plot_data_dark[i].max()
-        bodyMax = max(lightMax, darkMax)
+        lightMax = max(max(row) for row in body_ebc_plot_data_light[i])
+        darkMax  = max(max(row) for row in body_ebc_plot_data_dark[i])
+        bodyMax  = max(lightMax, darkMax)
 
         #ebc body
         ax4 = plt.subplot(3,4,6,projection='polar')
@@ -168,7 +180,7 @@ with PdfPages(root_folder + "\LightVsDark.pdf") as pdf:
         ax4.set_theta_direction(1)
         ax4.set_theta_offset(np.pi / 2.0)
         ax4.axis('off')
-        ax4.set_rticks([0, 200, 400, 600, 800, 1000],labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200/pixels_per_cm)))  # Less radial ticks
+        # ax4.set_rticks([0, 200, 400, 600, 800, 1000],labels=np.floor(np.arange(0, 1000 / pixels_per_cm_light + 1, 200/pixels_per_cm_light)))  # Less radial ticks
         ax4.axis('off')
 
         fig.colorbar(pc)
@@ -232,7 +244,7 @@ with PdfPages(root_folder + "\LightVsDark.pdf") as pdf:
         ax3.set_theta_direction(1)
         ax3.set_theta_offset(np.pi)
         ax3.set_thetagrids([0, 45, 90, 135, 180, 225, 270, 315], labels=['90°', '135°', '180°', '225°', '270°', '315°', '0°', '45°'])
-        ax3.set_rticks([0, 200, 400, 600, 800, 1000],labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200/pixels_per_cm)))  # Less radial ticks
+        # ax3.set_rticks([0, 200, 400, 600, 800, 1000],labels=np.floor(np.arange(0, 1000 / pixels_per_cm_dark + 1, 200/pixels_per_cm_dark)))  # Less radial ticks
         ax3.axis('off')
         fig.colorbar(pc)
 
@@ -247,7 +259,7 @@ with PdfPages(root_folder + "\LightVsDark.pdf") as pdf:
         pc = ax4.pcolormesh(A, R, body_ebc_plot_data_dark[i], cmap="jet", vmin = 0, vmax=bodyMax)
         ax4.set_theta_direction(1)
         ax4.set_theta_offset(np.pi / 2.0)
-        ax4.set_rticks([0, 200, 400, 600, 800, 1000],labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200/pixels_per_cm)))  # Less radial ticks
+        # ax4.set_rticks([0, 200, 400, 600, 800, 1000],labels=np.floor(np.arange(0, 1000 / pixels_per_cm_dark + 1, 200/pixels_per_cm_dark)))  # Less radial ticks
         ax4.axis('off')
         fig.colorbar(pc)
 

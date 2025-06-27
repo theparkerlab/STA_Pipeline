@@ -9,6 +9,7 @@ from scipy.interpolate import interp1d
 import matplotlib
 from matplotlib.backends.backend_pdf import PdfPages
 import os
+import ray
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 
@@ -26,13 +27,15 @@ def ebc_bins(dlc_df, bin_size_angle=12,bin_size_distance=160):
     Returns:
         tuple: Distance and angle bins as numpy arrays.
     """ 
-    top_left_corner = (dlc_df.iloc[0]['top_left_corner x'], dlc_df.iloc[0]['top_left_corner y'])
-    top_right_corner = (dlc_df.iloc[0]['top_right_corner x'],dlc_df.iloc[0]['top_right_corner y'])
-    bottom_left_corner = (dlc_df.iloc[0]['bottom_left_corner x'], dlc_df.iloc[0]['bottom_left_corner y'])
-    bottom_right_corner = (dlc_df.iloc[0]['bottom_right_corner x'], dlc_df.iloc[0]['bottom_right_corner y'])
     angle_bins = np.arange(0,360,bin_size_angle)
 
-    diagonal_distance_arena = math.hypot(top_right_corner[0] - bottom_left_corner[0], top_right_corner[1] - bottom_left_corner[1])
+    top_right_corner_x = dlc_df[dlc_df['top_right likelihood'] > 0.95]['top_right x'].median()
+    top_right_corner_y = dlc_df[dlc_df['top_right likelihood'] > 0.95]['top_right y'].median()
+
+    bottom_left_corner_x = dlc_df[dlc_df['bottom_left likelihood'] > 0.95]['bottom_left x'].median()
+    bottom_left_corner_y = dlc_df[dlc_df['bottom_left likelihood'] > 0.95]['bottom_left y'].median()
+
+    diagonal_distance_arena = math.hypot(top_right_corner_x - bottom_left_corner_x, top_right_corner_y - bottom_left_corner_y)
     distance_bins = np.arange(0,diagonal_distance_arena,bin_size_distance)
     return distance_bins,angle_bins
 
@@ -88,32 +91,49 @@ def lineLineIntersection(A, B, C, D):
         return (x, y)
 
 
-def calaculate_ebc_head(dlc_df,left_drive_x,left_drive_y,right_drive_x,right_dirve_y,ebc_angle_bin_size,ebc_dist_bin_size):
+def calaculate_ebc_head(dlc_df,driveL_x,driveL_y,driveR_x,driveR_y,ebc_angle_bin_size,ebc_dist_bin_size):
     """
     Calculate EBC data for each frame based on head orientation and arena boundaries.
 
     Args:
         dlc_df (DataFrame): Dataframe containing corner coordinates of the arena.
-        left_drive_x, left_drive_y (list): X, Y coordinates for the left side of head.
-        right_drive_x, right_dirve_y (list): X, Y coordinates for the right side of head.
+        driveL_x, driveL_y (list): X, Y coordinates for the left side of head.
+        driveR_x, right_dirve_y (list): X, Y coordinates for the right side of head.
         ebc_angle_bin_size (int): Size of angle bins in degrees.
         ebc_dist_bin_size (int): Size of distance bins.
 
     Returns:
         ndarray: Array of EBC data for each frame.
     """
-    top_left_corner = (dlc_df.iloc[0]['top_left_corner x'], dlc_df.iloc[0]['top_left_corner y'])
-    top_right_corner = (dlc_df.iloc[0]['top_right_corner x'],dlc_df.iloc[0]['top_right_corner y'])
-    bottom_left_corner = (dlc_df.iloc[0]['bottom_left_corner x'], dlc_df.iloc[0]['bottom_left_corner y'])
-    bottom_right_corner = (dlc_df.iloc[0]['bottom_right_corner x'], dlc_df.iloc[0]['bottom_right_corner y'])
-    distance_bins,angle_bins = ebc_bins(dlc_df,ebc_angle_bin_size,ebc_dist_bin_size)
+    if ray.is_initialized():
+        ray.shutdown()
+    ray.init(ignore_reinit_error=True)
+    top_left_corner = (dlc_df[dlc_df['top_left likelihood'] > 0.95]['top_left x'].median(), dlc_df[dlc_df['top_left likelihood'] > 0.95]['top_left y'].median())
+    top_right_corner = (dlc_df[dlc_df['top_right likelihood'] > 0.95]['top_right x'].median(), dlc_df[dlc_df['top_right likelihood'] > 0.95]['top_right y'].median())
+    bottom_left_corner = (dlc_df[dlc_df['bottom_left likelihood'] > 0.95]['bottom_left x'].median(), dlc_df[dlc_df['bottom_left likelihood'] > 0.95]['bottom_left y'].median())
+    bottom_right_corner = (dlc_df[dlc_df['bottom_right likelihood'] > 0.95]['bottom_right x'].median(), dlc_df[dlc_df['bottom_right likelihood'] > 0.95]['bottom_right y'].median())
+    distance_bins,angle_bins = ebc_bins(dlc_df, ebc_angle_bin_size,ebc_dist_bin_size)
     ebc_data_final = []
-    for i in range(len(left_drive_x)):
-        print(i, len(left_drive_x), "egocentric head") #TO VIEW PROGRESS
+    futures = []
+
+    # print(len(driveL_x))
+    for i in range(0, len(driveL_x), 1000):
+        futures.append(process_egocentric_head.remote(i, min(i + 1000, len(driveL_x)), driveL_x, driveL_y, driveR_x, driveR_y, ebc_angle_bin_size, ebc_dist_bin_size, distance_bins, angle_bins, top_left_corner, top_right_corner, bottom_left_corner, bottom_right_corner))
+    ebc_data_final = ray.get(futures)
+
+    flattened_array = np.concatenate([batch for batch in ebc_data_final])
+    # print(flattened_array.shape)
+    ray.shutdown()
+    return flattened_array
+
+@ray.remote
+def process_egocentric_head(startIndex, stopIndex, driveL_x, driveL_y, driveR_x, driveR_y, ebc_angle_bin_size, ebc_dist_bin_size, distance_bins, angle_bins, top_left_corner, top_right_corner, bottom_left_corner, bottom_right_corner):
+    ebc_data_batch = []
+    for i in range(startIndex, stopIndex):
         ebc_bins_total = np.zeros((len(distance_bins),len(angle_bins)))
-        for angle in range(0,360,3):
-            center_neck_pos = (left_drive_x[i],left_drive_y[i])
-            center_haunch_pos = (right_drive_x[i],right_dirve_y[i]) 
+        for angle in range(0,360,ebc_angle_bin_size):
+            center_neck_pos = (driveL_x[i],driveL_y[i])
+            center_haunch_pos = (driveR_x[i],driveR_y[i]) 
             center_neck_pos = rotate(center_haunch_pos,center_neck_pos,angle=math.radians(-1*angle))
             body_angle_radian_frame = math.atan2(center_haunch_pos[1]-center_neck_pos[1],center_haunch_pos[0]-center_neck_pos[0])
 
@@ -201,11 +221,10 @@ def calaculate_ebc_head(dlc_df,left_drive_x,left_drive_y,right_drive_x,right_dir
                     angle_bin_index = np.digitize(angle,angle_bins)
                     #print(i,min_distance,distance_bin_index,angle_bin_index)
                     ebc_bins_total[distance_bin_index-1][angle_bin_index-1]+=1
-        
-        ebc_data_final.append(ebc_bins_total)
-    return np.array(ebc_data_final)
+        ebc_data_batch.append(ebc_bins_total)
+    return ebc_data_batch
 
-def egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file, speed_threshold, ebc_angle_bin_size,ebc_dist_bin_size):
+def egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file, speed_threshold, ebc_angle_bin_size,ebc_dist_bin_size, dist_bins):
     """
     Compute egocentric head-centered (EBC) data and generate plots for head-related spikes.
 
@@ -225,7 +244,7 @@ def egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_wid
         tuple: EBC data for plotting, distance bins, binary EBC data, and max bin locations.
     """
 
-    columns_of_interest = ['left_drive','right_drive', 'time']
+    columns_of_interest = ['driveL','driveR', 'time']
 
     # Adding timestamps to dlc file and only considering columns of interest
     dlc_df['time'] = np.arange(len(dlc_df))/fps
@@ -237,24 +256,22 @@ def egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_wid
 
     #model_data_df = model_data_df.dropna()
 
-    center_neck_x = list(model_data_df['left_drive x'])
-    center_neck_y = list(model_data_df['left_drive y'])
-    center_haunch_x = list(model_data_df['right_drive x'])
-    center_haunch_y = list(model_data_df['right_drive y'])
+    center_neck_x = list(model_data_df['driveL x'])
+    center_neck_y = list(model_data_df['driveL y'])
+    center_haunch_x = list(model_data_df['driveR x'])
+    center_haunch_y = list(model_data_df['driveR y'])
 
     egocentric_file = file[:-3]+'ebc_head_data'
-    if os.path.exists(egocentric_file+'.npy'):
-        ebc_data = np.load(egocentric_file+'.npy')
-    else:
-        ebc_data = calaculate_ebc_head(dlc_df, center_neck_x,center_neck_y,center_haunch_x,center_haunch_y,ebc_angle_bin_size,ebc_dist_bin_size)
-        np.save(egocentric_file,np.array(ebc_data))
+    ebc_data = calaculate_ebc_head(dlc_df, center_neck_x,center_neck_y,center_haunch_x,center_haunch_y,ebc_angle_bin_size,ebc_dist_bin_size)
     
     
     distance_bins,angle_bins = ebc_bins(dlc_df,ebc_angle_bin_size,ebc_dist_bin_size)
 
     ebc_data_avg = np.sum(ebc_data,axis=0)
+    ebc_data_avg = ebc_data_avg[:dist_bins, :]
+    distance_bins = distance_bins[:dist_bins] #cut off far half of the arena
     rbins = distance_bins.copy()
-    abins = np.linspace(0,2*np.pi, 121)
+    abins = np.linspace(0,2*np.pi, (360//ebc_angle_bin_size))
 
     model_data_df['egocentric'] = list(ebc_data)
 
@@ -275,12 +292,15 @@ def egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_wid
         #binning spikes
         sp_count_ind = np.digitize(spike_times,bins = model_t)
 
-        #-1 because np.digitze is 1-indexed
+        #-1 because np.digitize is 1-indexed
         sp_count_ind = [i-1 for i in sp_count_ind]
 
         sp_count_ind = [i for i in sp_count_ind if i in model_data_df.index]
 
-        cell_spikes_egocentric = model_data_df['egocentric'].loc[sp_count_ind]  
+        cell_spikes_egocentric = model_data_df['egocentric'].loc[sp_count_ind]
+        cell_spikes_egocentric = cell_spikes_egocentric.apply(lambda x: x[:dist_bins, :]) #truncates by :dist_bins
+
+        print(cell_spikes_egocentric.iloc[0].shape, "\n\n")
 
         cell_spikes_avg = np.sum(cell_spikes_egocentric,axis = 0)
         cell_spikes_avg = np.divide(cell_spikes_avg,ebc_data_avg)
@@ -317,10 +337,10 @@ def egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_wid
     plots = []
     pdf_file = file[:-3]+'_ebc_headPlots.pdf'
     pp = PdfPages(pdf_file)
-    pixels_per_cm = (dlc_df.iloc[0]['top_right_corner x'] - dlc_df.iloc[0]['top_left_corner x']) / 60
+    pixels_per_cm = (dlc_df[dlc_df['top_right likelihood'] > 0.95]['top_right x'].median() - dlc_df[dlc_df['top_left likelihood'] > 0.95]['top_left x'].median()) / 60
 
     for i in range(len(ebc_plot_data)):
-        fig = plot_ebc_head(ebc_plot_data[i],i, distance_bins,ebc_angle_bin_size, pixels_per_cm)
+        fig = plot_ebc_head(ebc_plot_data[i][:dist_bins],i, distance_bins[:dist_bins],ebc_angle_bin_size, pixels_per_cm)
         plots.append(fig)
         pp.savefig(fig)
 

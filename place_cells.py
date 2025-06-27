@@ -10,7 +10,7 @@ from utils import set_to_nan_based_on_likelihood, plot_2d_hist,filter_and_interp
 
 def place_cells(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file, speed_threshold):
 
-    columns_of_interest = ['center_haunch', 'time']
+    columns_of_interest = ['tailBase', 'time']
     dlc_df['time'] = np.arange(len(dlc_df))/fps
 
     #filter and interpolate
@@ -18,10 +18,10 @@ def place_cells(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, 
 
     model_data_df[model_data_df['speed']>speed_threshold]
 
-    br_x = corners('bottom_right_corner x',dlc_df, "bottom_right_corner likelihood", likelihood_threshold)
-    bl_x = corners('bottom_left_corner x',dlc_df, "bottom_left_corner likelihood", likelihood_threshold)
-    br_y = corners('bottom_right_corner y',dlc_df, "bottom_right_corner likelihood", likelihood_threshold)
-    tr_y = corners('top_right_corner y',dlc_df, "top_right_corner likelihood", likelihood_threshold)
+    br_x = corners('bottom_right x',dlc_df, "bottom_right likelihood", likelihood_threshold)
+    bl_x = corners('bottom_left x',dlc_df, "bottom_left likelihood", likelihood_threshold)
+    br_y = corners('bottom_right y',dlc_df, "bottom_right likelihood", likelihood_threshold)
+    tr_y = corners('top_right y',dlc_df, "top_right likelihood", likelihood_threshold)
 
     arena_x = 60
     arena_y = 60 

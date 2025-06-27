@@ -18,7 +18,7 @@ from scipy.stats import weibull_min
 
 
 
-def process_half(dlc_df_half, columns_of_interest, likelihood_threshold, model_dt, fps, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size):
+def process_half(dlc_df_half, columns_of_interest, likelihood_threshold, model_dt, fps, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins):
     """
     Processes one half of the dlc DataFrame to filter, interpolate, and calculate egocentric head-centered (EBC) data.
 
@@ -42,16 +42,17 @@ def process_half(dlc_df_half, columns_of_interest, likelihood_threshold, model_d
     model_data_df = model_data_df[model_data_df['speed'] > speed_threshold]
     
     # Get coordinates for ebc calculation
-    center_neck_x = list(model_data_df['left_drive x'])
-    center_neck_y = list(model_data_df['left_drive y'])
-    center_haunch_x = list(model_data_df['right_drive x'])
-    center_haunch_y = list(model_data_df['right_drive y'])
+    center_neck_x = list(model_data_df['driveL x'])
+    center_neck_y = list(model_data_df['driveL y'])
+    center_haunch_x = list(model_data_df['driveR x'])
+    center_haunch_y = list(model_data_df['driveR y'])
     
     # Calculate ebc
     ebc_data = calaculate_ebc_head(dlc_df_half, center_neck_x, center_neck_y, center_haunch_x, center_haunch_y, ebc_angle_bin_size, ebc_dist_bin_size)
     distance_bins, angle_bins = ebc_bins(dlc_df_half, ebc_angle_bin_size, ebc_dist_bin_size)
     
     ebc_data_avg = np.sum(ebc_data, axis=0)
+    distance_bins = distance_bins[:dist_bins]
     rbins = distance_bins.copy()
     abins = np.linspace(0, 2*np.pi, 121)
     
@@ -59,7 +60,7 @@ def process_half(dlc_df_half, columns_of_interest, likelihood_threshold, model_d
     
     return model_data_df, model_t
 
-def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins):
+def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins, ebc_angle_bin_size, dist_bins):
     """
     Calculate mean resultant lengths (MRLs) and preferred distances for each cell's spike data.
 
@@ -74,8 +75,8 @@ def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins):
         tuple: MRLs, mean angles, and preferred distances for each cell.
     """
     ebc_plot_data = []
-    n = 120
-    m = 27
+    n = int(360 // ebc_angle_bin_size)  # number of orientation bins
+    m = dist_bins   # number of distance bins
     MRLS = []
     MALS = []
     preferred_dist = []
@@ -125,7 +126,7 @@ def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins):
     return MRLS, MALS,preferred_dist
 
 
-def egocentric_head_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size):
+def egocentric_head_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins):
     """
     Perform a half-check analysis on egocentric head-centered data by splitting the data and analyzing each half separately.
 
@@ -145,7 +146,7 @@ def egocentric_head_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_
         tuple: MRLs, mean angles, and preferred distances for each half of the data, allowing comparison.
     """
 
-    columns_of_interest = ['left_drive', 'right_drive', 'time']
+    columns_of_interest = ['driveL', 'driveR', 'time']
 
     # Adding timestamps to dlc file and only considering columns of interest
     dlc_df['time'] = np.arange(len(dlc_df)) / fps
@@ -156,21 +157,17 @@ def egocentric_head_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_
     dlc_df_2 = dlc_df.iloc[half_len:].copy()
 
     # Process each half
-    model_data_df_1, model_t1 = process_half(dlc_df_1, columns_of_interest, likelihood_threshold, model_dt, fps, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size)
-    model_data_df_2, model_t2 = process_half(dlc_df_2, columns_of_interest, likelihood_threshold, model_dt, fps, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size)
+    model_data_df_1, model_t1 = process_half(dlc_df_1, columns_of_interest, likelihood_threshold, model_dt, fps, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
+    model_data_df_2, model_t2 = process_half(dlc_df_2, columns_of_interest, likelihood_threshold, model_dt, fps, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
 
     cell_numbers = phy_df.index
     distance_bins, angle_bins = ebc_bins(dlc_df, ebc_angle_bin_size, ebc_dist_bin_size)
+    distance_bins = distance_bins[:dist_bins]
     rbins = distance_bins.copy()
     abins = np.linspace(0, 2*np.pi, (360 // ebc_angle_bin_size))
 
     half_check_file = file[:-3]+'_half_ebc_head_data'
-    if os.path.exists(half_check_file+'.npy'):
-        print('half_check file exists')
-        MRLS_1, MRLS_2, MALS_1, MALS_2 = np.load(half_check_file+'.npy')
-    else:
-        MRLS_1, MALS_1,pref_dist_1 = calc_mrls(model_data_df_1, phy_df, cell_numbers, model_t1, abins)
-        MRLS_2, MALS_2,pref_dist_2 = calc_mrls(model_data_df_2, phy_df, cell_numbers, model_t2, abins)
-        np.save(half_check_file,np.array([MRLS_1, MRLS_2, MALS_1, MALS_2,pref_dist_1,pref_dist_2]))
+    MRLS_1, MALS_1,pref_dist_1 = calc_mrls(model_data_df_1, phy_df, cell_numbers, model_t1, abins, ebc_angle_bin_size, dist_bins)
+    MRLS_2, MALS_2,pref_dist_2 = calc_mrls(model_data_df_2, phy_df, cell_numbers, model_t2, abins, ebc_angle_bin_size, dist_bins)
 
     return MRLS_1, MRLS_2, MALS_1, MALS_2,pref_dist_1,pref_dist_2

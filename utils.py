@@ -47,10 +47,10 @@ def plot_ebc(data,i,distance_bins,angle_bin_size, pixels_per_cm):
     fig, ax = plt.subplots(subplot_kw=dict(projection="polar"))
     fig.suptitle("cell_number: "+(str(i)))
 
-    pc = ax.pcolormesh(A, R, data, cmap="jet")
+    pc = ax.pcolormesh(A, R, data, cmap="jet", vmin=0)
     ax.set_theta_direction(1)
     ax.set_theta_offset(np.pi / 2)
-    ax.set_rticks([0, 200, 400, 600, 800, 1000],labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200/pixels_per_cm)))  # Less radial ticks
+    # ax.set_rticks([0, 200, 400, 600, 800, 1000],labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200/pixels_per_cm)))  # Less radial ticks
     fig.colorbar(pc)
     return fig
 
@@ -69,8 +69,8 @@ def plot_ebc_head(data,i,distance_bins,angle_bin_size, pixels_per_cm):
     pc = ax.pcolormesh(A, R, data, cmap="jet")
     ax.set_theta_direction(1)
     ax.set_theta_offset(np.pi)
-    ax.set_thetagrids([0, 45, 90, 135, 180, 225, 270, 315], labels=['90°', '135°', '180°', '225°', '270°', '315°', '0°', '45°'])
-    ax.set_rticks([0, 200, 400, 600, 800, 1000],labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200/pixels_per_cm)))  # Less radial ticks
+    # ax.set_thetagrids([0, 45, 90, 135, 180, 225, 270, 315], labels=['90°', '135°', '180°', '225°', '270°', '315°', '0°', '45°'])
+    # ax.set_rticks([0, 200, 400, 600, 800, 1000],labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200/pixels_per_cm)))  # Less radial ticks
     fig.colorbar(pc)
     return fig
 
@@ -120,11 +120,11 @@ def calcFrameVelocity(keys, dlc_df, fps):
         y_vals = interpolateMovement(y_vals)
 
     threshold = 0.9
-    top_right_corner_x_vals = dlc_df['top_right_corner x'].copy()
-    top_right_corner_x_vals[dlc_df['top_right_corner likelihood']<threshold] = np.nan
+    top_right_corner_x_vals = dlc_df['top_right x'].copy()
+    top_right_corner_x_vals[dlc_df['top_right likelihood']<threshold] = np.nan
     top_right_x = np.nanmean(top_right_corner_x_vals)
-    top_left_corner_x_vals = dlc_df['top_left_corner x'].copy()
-    top_left_corner_x_vals[dlc_df['top_left_corner likelihood']<threshold] = np.nan
+    top_left_corner_x_vals = dlc_df['top_left x'].copy()
+    top_left_corner_x_vals[dlc_df['top_left likelihood']<threshold] = np.nan
     top_left_x = np.nanmean(top_left_corner_x_vals)
     pixels_per_cm = (top_right_x - top_left_x) / 60
     
@@ -155,11 +155,11 @@ def speed(keys, dlc_df, fps):
         y_vals = interpolateMovement(y_vals)
 
     threshold = 0.9
-    top_right_corner_x_vals = dlc_df['top_right_corner x'].copy()
-    top_right_corner_x_vals[dlc_df['top_right_corner likelihood']<threshold] = np.nan
+    top_right_corner_x_vals = dlc_df['top_right x'].copy()
+    top_right_corner_x_vals[dlc_df['top_right likelihood']<threshold] = np.nan
     top_right_x = np.nanmean(top_right_corner_x_vals)
-    top_left_corner_x_vals = dlc_df['top_left_corner x'].copy()
-    top_left_corner_x_vals[dlc_df['top_left_corner likelihood']<threshold] = np.nan
+    top_left_corner_x_vals = dlc_df['top_left x'].copy()
+    top_left_corner_x_vals[dlc_df['top_left likelihood']<threshold] = np.nan
     top_left_x = np.nanmean(top_left_corner_x_vals)
     pixels_per_cm = (top_right_x - top_left_x) / 60
     
@@ -206,6 +206,7 @@ def removeWhenStationary(spikeTimes, model_t, frame_velocity):
 def corners(point,dlc_df, point_likelihood, likelihood_threshold):
     vals = dlc_df[point].copy()
     vals[dlc_df[point_likelihood]<likelihood_threshold] = np.nan
+
     return np.nanmean(vals)
 
 def plot_2d_hist(bin_counts, x_edges,y_edges):

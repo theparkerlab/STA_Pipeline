@@ -12,7 +12,7 @@ from utils import set_to_nan_based_on_likelihood, plot_ebc,filter_and_interpolat
 
 def trajectory_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file, speed_threshold):
 
-    columns_of_interest = ['center_haunch','center_neck','time']
+    columns_of_interest = ['haunchC','neck','time']
 
     # Adding timestamps to dlc file and only considering columns of interest
     dlc_df['time'] = np.arange(len(dlc_df))/fps
@@ -23,22 +23,22 @@ def trajectory_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_wid
     model_data_df = model_data_df[model_data_df['speed']>speed_threshold]
 
     bds = []
-    y = list(model_data_df['center_haunch y']-model_data_df['center_neck y'])
-    x = list(model_data_df['center_haunch x']-model_data_df['center_neck x'])
+    y = list(model_data_df['haunchC y']-model_data_df['neck y'])
+    x = list(model_data_df['haunchC x']-model_data_df['neck x'])
     for i in range(len(x)):
         bds.append(math.atan2(y[i],x[i]))
 
     model_data_df['head_direction'] = bds
 
-    trajectory_df = dlc_df[['center_haunch x', 'center_haunch y']]
+    trajectory_df = dlc_df[['haunchC x', 'haunchC y']]
 
-    trajectory_df = trajectory_df[trajectory_df['center_haunch x']>400]
-    trajectory_df = trajectory_df[trajectory_df['center_haunch x']<1200]
-    trajectory_df = trajectory_df[trajectory_df['center_haunch y']>100]
-    trajectory_df = trajectory_df[trajectory_df['center_haunch y']<900]
+    trajectory_df = trajectory_df[trajectory_df['haunchC x']>400]
+    trajectory_df = trajectory_df[trajectory_df['haunchC x']<1200]
+    trajectory_df = trajectory_df[trajectory_df['haunchC y']>100]
+    trajectory_df = trajectory_df[trajectory_df['haunchC y']<900]
 
-    ch_points_x = list(trajectory_df['center_haunch x'])
-    ch_points_y = list(trajectory_df['center_haunch y'])
+    ch_points_x = list(trajectory_df['haunchC x'])
+    ch_points_y = list(trajectory_df['haunchC y'])
 
     cell_numbers = phy_df.index
     

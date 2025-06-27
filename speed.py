@@ -10,7 +10,7 @@ def speedPlots(dlc_df, phy_df, file):
     matplotlib.rcParams['ps.fonttype'] = 42
 
     fps = 59.99
-    model_dt = 1/59.99  # Frame duration in seconds
+    model_dt = 1/fps  # Frame duration in seconds
     dlc_df['time'] = np.arange(len(dlc_df))/fps
     model_t = np.arange(0, dlc_df['time'].iloc[-1], model_dt)
 
@@ -24,14 +24,7 @@ def speedPlots(dlc_df, phy_df, file):
             x_vals = interpolateMovement(x_vals)
             y_vals = interpolateMovement(y_vals)
 
-        threshold = 0.9
-        top_right_corner_x_vals = dlc_df['top_right_corner x'].copy()
-        top_right_corner_x_vals[dlc_df['top_right_corner likelihood']<threshold] = np.nan
-        top_right_x = np.nanmean(top_right_corner_x_vals)
-        top_left_corner_x_vals = dlc_df['top_left_corner x'].copy()
-        top_left_corner_x_vals[dlc_df['top_left_corner likelihood']<threshold] = np.nan
-        top_left_x = np.nanmean(top_left_corner_x_vals)
-        pixels_per_cm = (top_right_x - top_left_x) / 60
+        pixels_per_cm = (dlc_df[dlc_df['top_right likelihood'] > 0.95]['top_right x'].median() - dlc_df[dlc_df['top_left likelihood'] > 0.95]['top_left x'].median()) / 60
         
         velocityX = np.diff(x_vals/pixels_per_cm) * fps #cm per sec
         velocityY = np.diff(y_vals/pixels_per_cm) * fps #cm per sec
@@ -107,7 +100,7 @@ def speedPlots(dlc_df, phy_df, file):
 
         return average_firing_rates, standard_deviations, standard_errors
     
-    velocity = calcVelocity(['right_haunch'])
+    velocity = calcVelocity(['tailBase'])
     adjustedVelocity = []
     binTime = 0
     i = 0

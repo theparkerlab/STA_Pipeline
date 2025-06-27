@@ -47,7 +47,7 @@ def find(pattern, path):
 # File/Video Initialization
 root = Tk()
 root.withdraw() 
-path = askdirectory(title='Choose experiment folder', initialdir=r'\\rhea\E')
+path = askdirectory(title='Choose experiment folder', initialdir=r'\\rhea\E\ephys')
 print('you have selected: ', path)
 
 # Locate the file for data analysis
@@ -63,9 +63,11 @@ likelihood_threshold = 0.95
 model_dt = 1 / fps  # Frame duration in seconds
 bin_width = 20  # Bin width for angles
 speed_threshold = 0.25
-ebc_angle_bin_size = 3
-ebc_dist_bin_size = 40
-pixels_per_cm = (dlc_df.iloc[0]['top_right_corner x'] - dlc_df.iloc[0]['top_left_corner x']) / 60
+ebc_angle_bin_size = 6
+ebc_dist_bin_size = 10
+dist_bins = 480 // ebc_dist_bin_size #480 is approximately half the arena length in pixels
+pixels_per_cm = (dlc_df[dlc_df['top_right likelihood'] > 0.95]['top_right x'].median() - dlc_df[dlc_df['top_left likelihood'] > 0.95]['top_left x'].median()) / 60
+print("P/CM: " + str(pixels_per_cm))
 
 # Run analyses for head and body direction, and place cells
 head_plot_data, head_bin_edges = head_direction(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold)
@@ -78,23 +80,15 @@ mouse_xs, mouse_ys, cell_hds, ch_points_x, ch_points_y = trajectory_head(dlc_df,
 mouse_xsb, mouse_ysb, cell_bds, ch_points_x, ch_points_y = trajectory_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold)
 
 # Bootstrap analyses for egocentric head and body
-MRLs_h, Mrlthresh_h, MALs_h, head_ebc_plot_data, head_distance_bins, ebc_plot_data_binary_head, max_bins_head, pref_dist_head = bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size)
-MRLs_b, Mrlthresh_b, MALs_b, body_ebc_plot_data, body_distance_bins, ebc_plot_data_binary, max_bins, pref_dist_body = bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size)
+MRLs_h, Mrlthresh_h, MALs_h, head_ebc_plot_data, head_distance_bins, ebc_plot_data_binary_head, max_bins_head, pref_dist_head = bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
+MRLs_b, Mrlthresh_b, MALs_b, body_ebc_plot_data, body_distance_bins, ebc_plot_data_binary, max_bins, pref_dist_body = bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
 
 # Half-check for consistency in analysis
 half_check_file = dlc_phy_file[:-3] + '_half_ebc_body_data'
-if os.path.exists(half_check_file + '.npy'):
-    print('half_check file exists')
-    MRLS_1, MRLS_2, MALS_1, MALS_2, pref_dist_1, pref_dist_2 = np.load(half_check_file + '.npy')
-else:
-    MRLS_1, MRLS_2, MALS_1, MALS_2, pref_dist_1, pref_dist_2 = egocentric_body_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size)
+MRLS_1, MRLS_2, MALS_1, MALS_2, pref_dist_1, pref_dist_2 = egocentric_body_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
 
 half_check_file = dlc_phy_file[:-3] + '_half_ebc_head_data'
-if os.path.exists(half_check_file + '.npy'):
-    print('half_check file exists')
-    MRLS_1_h, MRLS_2_h, MALS_1_h, MALS_2_h, pref_dist_1_h, pref_dist_2_h = np.load(half_check_file + '.npy')
-else:
-    MRLS_1_h, MRLS_2_h, MALS_1_h, MALS_2_h, pref_dist_1_h, pref_dist_2_h = egocentric_head_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size)
+MRLS_1_h, MRLS_2_h, MALS_1_h, MALS_2_h, pref_dist_1_h, pref_dist_2_h = egocentric_head_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
 
 print(len(MRLS_1), len(MRLS_2), len(MALS_1), len(MALS_2))
 
@@ -112,12 +106,17 @@ MRLS_1 = [round(num, 3) for num in MRLS_1]
 MRLS_2 = [round(num, 3) for num in MRLS_2]
 MALS_1 = [round(num, 3) for num in MALS_1]
 MALS_2 = [round(num, 3) for num in MALS_2]
+MRLS_1_h = [round(num, 3) for num in MRLS_1_h]
+MRLS_2_h = [round(num, 3) for num in MRLS_2_h]
+MALS_1_h = [round(num, 3) for num in MALS_1_h]
+MALS_2_h = [round(num, 3) for num in MALS_2_h]
 
 print(Mrlthresh_h)
 
 # Define the PDF filename for saving plots
 filename = dlc_phy_file[:-3] + "angle_" + str(ebc_angle_bin_size) + "dis_" + str(ebc_dist_bin_size) + "_allPlots.pdf"
 
+#11/10/24 ask joy or krithik to modify these data that go into these plots to exclude the outer zone showing up as artifact (have to do this in the original calculation before MRL/MRA etc. are done)
 # Save plots to PDF
 with PdfPages(filename) as pdf:
     for i in range(len(head_plot_data)):
@@ -145,13 +144,13 @@ with PdfPages(filename) as pdf:
 
         # EBC head plot
         ax3 = plt.subplot(523, projection='polar')
-        rbins = head_distance_bins.copy()[:24]
+        rbins = head_distance_bins.copy()
         abins = np.linspace(0, 2 * np.pi, (360 // ebc_angle_bin_size))
         A, R = np.meshgrid(abins, rbins)
-        pc = ax3.pcolormesh(A, R, head_ebc_plot_data[i][:24], cmap="jet")
+        pc = ax3.pcolormesh(A, R, head_ebc_plot_data[i], cmap="jet")
         ax3.set_theta_direction(1)
         ax3.set_theta_offset(np.pi)
-        ax3.set_rticks([0, 200, 400, 600, 800, 1000], labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200 / pixels_per_cm)))
+        # ax3.set_rticks([0, 200, 400, 600, 800, 1000], labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200 / pixels_per_cm)))
         ax3.set_title(f"MRL: {MRLs_h[i]:.3f} | MRA: {MALs_h[i]:.3f} | "
                       f"MRL_1: {MRLS_1_h[i]:.3f} | MRL_2: {MRLS_2_h[i]:.3f} | "
                       f"MRA_1: {MALS_1_h[i]:.3f} | MRA_2: {MALS_2_h[i]:.3f} | "
@@ -161,13 +160,13 @@ with PdfPages(filename) as pdf:
 
         # EBC body plot
         ax4 = plt.subplot(524, projection='polar')
-        rbins = body_distance_bins.copy()[:24]
+        rbins = body_distance_bins.copy()
         abins = np.linspace(0, 2 * np.pi, (360 // ebc_angle_bin_size))
         A, R = np.meshgrid(abins, rbins)
-        pc = ax4.pcolormesh(A, R, body_ebc_plot_data[i][:24], cmap="jet")
+        pc = ax4.pcolormesh(A, R, body_ebc_plot_data[i], cmap="jet")
         ax4.set_theta_direction(1)
         ax4.set_theta_offset(np.pi / 2.0)
-        ax4.set_rticks([0, 200, 400, 600, 800, 1000], labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200 / pixels_per_cm)))
+        # ax4.set_rticks([0, 200, 400, 600, 800, 1000], labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200 / pixels_per_cm)))
         ax4.set_title(f"MRL: {MRLs_b[i]:.3f} | MRA: {MALs_b[i]:.3f} | "
                       f"MRL_1: {MRLS_1[i]:.3f} | MRL_2: {MRLS_2[i]:.3f} | "
                       f"MRA_1: {MALS_1[i]:.3f} | MRA_2: {MALS_2[i]:.3f} | "
@@ -177,11 +176,11 @@ with PdfPages(filename) as pdf:
 
         # Binary plot head
         ax5 = plt.subplot(525, projection='polar')
-        pc2 = ax5.pcolormesh(A, R, ebc_plot_data_binary_head[i][:24], cmap='Reds')
+        pc2 = ax5.pcolormesh(A, R, ebc_plot_data_binary_head[i], cmap='Reds')
         ax5.set_theta_direction(1)
         ax5.set_theta_offset(np.pi)
         fig.colorbar(pc2, ax=ax5)
-        max_idx = np.unravel_index(np.argmax(head_ebc_plot_data[i][:24], axis=None), head_ebc_plot_data[i][:24].shape)
+        max_idx = np.unravel_index(np.argmax(head_ebc_plot_data[i], axis=None), head_ebc_plot_data[i].shape)
         r_min, r_max = rbins[max_idx[0]], rbins[np.clip(max_idx[0] + 1, 0, len(rbins) - 1)]
         theta_min, theta_max = abins[max_idx[1]], abins[np.clip(max_idx[1] + 1, 0, len(abins) - 1)]
         ax5.pcolormesh([theta_min, theta_max], [r_min, r_max], np.array([[head_ebc_plot_data[i][max_idx]]]), cmap="coolwarm")
@@ -192,11 +191,11 @@ with PdfPages(filename) as pdf:
 
         # Binary plot body
         ax6 = plt.subplot(526, projection='polar')
-        pc2 = ax6.pcolormesh(A, R, ebc_plot_data_binary[i][:24], cmap='Reds')
+        pc2 = ax6.pcolormesh(A, R, ebc_plot_data_binary[i], cmap='Reds')
         ax6.set_theta_direction(1)
         ax6.set_theta_offset(np.pi / 2.0)
         fig.colorbar(pc2, ax=ax6)
-        max_idx = np.unravel_index(np.argmax(body_ebc_plot_data[i][:24], axis=None), body_ebc_plot_data[i][:24].shape)
+        max_idx = np.unravel_index(np.argmax(body_ebc_plot_data[i], axis=None), body_ebc_plot_data[i].shape)
         r_min, r_max = rbins[max_idx[0]], rbins[np.clip(max_idx[0] + 1, 0, len(rbins) - 1)]
         theta_min, theta_max = abins[max_idx[1]], abins[np.clip(max_idx[1] + 1, 0, len(abins) - 1)]
         ax6.pcolormesh([theta_min, theta_max], [r_min, r_max], np.array([[body_ebc_plot_data[i][max_idx]]]), cmap="coolwarm")

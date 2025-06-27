@@ -10,7 +10,7 @@ from utils import set_to_nan_based_on_likelihood, plot_polar_plot, filter_and_in
 
 def body_direction(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file, speed_threshold):
     
-    columns_of_interest = ['center_neck', 'center_haunch', 'time']
+    columns_of_interest = ['neck', 'haunchC', 'time']
     dlc_df['time'] = np.arange(len(dlc_df))/fps
 
     #filter and interpolate
@@ -18,7 +18,7 @@ def body_direction(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_widt
 
     model_data_df[model_data_df['speed']>speed_threshold]
 
-    body_angle_rad = np.arctan2((model_data_df['center_neck y'] - model_data_df['center_haunch y']),(model_data_df['center_neck x'] - model_data_df['center_haunch x']))
+    body_angle_rad = np.arctan2((model_data_df['neck y'] - model_data_df['haunchC y']),(model_data_df['neck x'] - model_data_df['haunchC x']))
     #converting to degrees
     body_angle_deg = np.rad2deg(body_angle_rad % (2*np.pi))
 

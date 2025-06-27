@@ -12,7 +12,7 @@ from utils import set_to_nan_based_on_likelihood, plot_ebc,filter_and_interpolat
 
 def trajectory_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file, speed_threshold):
 
-    columns_of_interest = ['center_haunch','left_drive','right_drive', 'time']
+    columns_of_interest = ['haunchC','driveL','driveR', 'time']
 
     # Adding timestamps to dlc file and only considering columns of interest
     dlc_df['time'] = np.arange(len(dlc_df))/fps
@@ -23,22 +23,22 @@ def trajectory_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_wid
     model_data_df = model_data_df[model_data_df['speed']>speed_threshold]
 
     hds = []
-    y = list(model_data_df['left_drive y']-model_data_df['right_drive y'])
-    x = list(model_data_df['left_drive x']-model_data_df['right_drive x'])
+    y = list(model_data_df['driveL y']-model_data_df['driveR y'])
+    x = list(model_data_df['driveL x']-model_data_df['driveR x'])
     for i in range(len(x)):
         hds.append(math.atan2(y[i],x[i]) + np.deg2rad(90))
 
     model_data_df['head_direction'] = hds
 
-    trajectory_df = dlc_df[['center_haunch x', 'center_haunch y']]
+    trajectory_df = dlc_df[['haunchC x', 'haunchC y']]
 
-    trajectory_df = trajectory_df[trajectory_df['center_haunch x']>400]
-    trajectory_df = trajectory_df[trajectory_df['center_haunch x']<1200]
-    trajectory_df = trajectory_df[trajectory_df['center_haunch y']>100]
-    trajectory_df = trajectory_df[trajectory_df['center_haunch y']<900]
+    trajectory_df = trajectory_df[trajectory_df['haunchC x']>400]
+    trajectory_df = trajectory_df[trajectory_df['haunchC x']<1200]
+    trajectory_df = trajectory_df[trajectory_df['haunchC y']>100]
+    trajectory_df = trajectory_df[trajectory_df['haunchC y']<900]
 
-    ch_points_x = list(trajectory_df['center_haunch x'])
-    ch_points_y = list(trajectory_df['center_haunch y'])
+    ch_points_x = list(trajectory_df['haunchC x'])
+    ch_points_y = list(trajectory_df['haunchC y'])
 
     cell_numbers = phy_df.index
     

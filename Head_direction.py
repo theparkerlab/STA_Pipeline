@@ -10,7 +10,7 @@ from utils import set_to_nan_based_on_likelihood, plot_polar_plot,filter_and_int
 
 def head_direction(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file, speed_threshold):
 
-    columns_of_interest = ['left_drive', 'right_drive', 'time']
+    columns_of_interest = ['driveL', 'driveR', 'time']
     dlc_df['time'] = np.arange(len(dlc_df))/fps
 
     #filter and interpolate
@@ -18,7 +18,7 @@ def head_direction(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_widt
 
     model_data_df[model_data_df['speed']>speed_threshold]
 
-    head_angle_rad = np.add(np.arctan2((model_data_df['left_drive y'] - model_data_df['right_drive y']),(model_data_df['left_drive x'] - model_data_df['right_drive x'])),np.deg2rad(90))
+    head_angle_rad = np.add(np.arctan2((model_data_df['driveL y'] - model_data_df['driveR y']),(model_data_df['driveL x'] - model_data_df['driveR x'])),np.deg2rad(90))
     #converting to degrees
     head_angle_deg = np.rad2deg(head_angle_rad % (2*np.pi))
 
@@ -58,6 +58,7 @@ def head_direction(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_widt
         cell_bin_counts, bin_edges = np.histogram(cell_spike_angles, bins=bin_angles)
 
         bin_spike_counts_avg = np.round(np.divide(cell_bin_counts,bin_counts),2)
+
         bin_spike_counts_avg = np.multiply(bin_spike_counts_avg, fps)
 
         fig, ax = plot_polar_plot(bin_spike_counts_avg,bin_edges,i, bin_width)
