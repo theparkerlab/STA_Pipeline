@@ -81,10 +81,10 @@ ebc_dist_bin_size = 10
 dist_bins = 480 // ebc_dist_bin_size #480 is approximately half the arena length in pixels
 
 pixels_per_cm_light = (dlc_df_light[dlc_df_light['top_right likelihood'] > 0.95]['top_right x'].median() - dlc_df_light[dlc_df_light['top_left likelihood'] > 0.95]['top_left x'].median()) / 60
-print("P/CM LIGHT: " + str(pixels_per_cm_light))
+# print("P/CM LIGHT: " + str(pixels_per_cm_light))
 
 pixels_per_cm_dark = (dlc_df_dark[dlc_df_dark['top_right likelihood'] > 0.95]['top_right x'].median() - dlc_df_dark[dlc_df_dark['top_left likelihood'] > 0.95]['top_left x'].median()) / 60
-print("P/CM DARK: " + str(pixels_per_cm_dark))
+# print("P/CM DARK: " + str(pixels_per_cm_dark))
 
 head_plot_data_light, head_bin_edges_light = head_direction(dlc_df_light, phy_df_light, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file_light,speed_threshold)
 head_plot_data_dark, head_bin_edges_dark = head_direction(dlc_df_dark, phy_df_dark, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file_dark, speed_threshold)

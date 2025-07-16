@@ -261,8 +261,9 @@ def egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_wid
 
     distance_bins,angle_bins = ebc_bins(dlc_df, ebc_angle_bin_size, ebc_dist_bin_size)
 
-    ebc_data_avg = np.sum(ebc_data,axis=0) 
     distance_bins = distance_bins[:dist_bins] #cut off far half of the arena
+    ebc_data_avg = np.sum(ebc_data,axis=0)
+    ebc_data_avg = ebc_data_avg[:dist_bins, :]
     rbins = distance_bins.copy()
     abins = np.linspace(0,2*np.pi, (360//ebc_angle_bin_size))
 
@@ -295,13 +296,17 @@ def egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_wid
         cell_spikes_egocentric = model_data_df['egocentric'].loc[sp_count_ind]
         cell_spikes_egocentric = cell_spikes_egocentric.apply(lambda x: x[:dist_bins, :]) #truncates by :dist_bins
 
-        print(cell_spikes_egocentric.iloc[0].shape, "\n\n")
+        # print(cell_spikes_egocentric.iloc[0].shape, "\n\n")
 
         cell_spikes_avg = np.sum(cell_spikes_egocentric,axis = 0)
-        cell_spikes_avg = np.divide(cell_spikes_avg,ebc_data_avg)
-        
+                
         cell_spikes_avg[np.isnan(cell_spikes_avg)] = 0
         cell_spikes_avg = np.multiply(cell_spikes_avg, fps)
+
+        #"half the arena size" filter
+        cell_spikes_avg = cell_spikes_avg[:dist_bins,:]
+
+        cell_spikes_avg = np.divide(cell_spikes_avg,ebc_data_avg)
 
         ebc_plot_data.append(cell_spikes_avg)
         

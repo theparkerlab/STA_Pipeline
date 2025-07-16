@@ -181,6 +181,7 @@ def speedPlots(dlc_df, phy_df, file):
         fig.tight_layout()
         fig_list.append(fig)
         pp.savefig(fig)
+        plt.close(fig)
 
     pp.close()
     return velocity_list, spike_list, spike_avg_list, std_error_lower, std_error_upper, timeInSeconds

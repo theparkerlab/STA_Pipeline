@@ -13,6 +13,7 @@ import cv2
 from PIL import Image
 from tkinter import Tk
 from tkinter.filedialog import askdirectory
+import h5py
 
 # Custom imports from specific modules
 from speed import speedPlots
@@ -43,6 +44,35 @@ def find(pattern, path):
     if len(result) == 1:
         result = result[0]
     return result
+
+#function to save analyzed data to an h5 file
+def save_to_h5(filename, **variables):
+    with h5py.File(filename, 'w') as f:
+        for name, obj in variables.items():
+            if isinstance(obj, np.ndarray):
+                f.create_dataset(name, data=obj,
+                                 compression='gzip', chunks=True)
+            elif isinstance(obj, list):
+                # convert to array (must be homogenous dtype)
+                arr = np.array(obj)
+                f.create_dataset(name, data=arr,
+                                 compression='gzip', chunks=True)
+            elif isinstance(obj, pd.DataFrame):
+                grp = f.create_group(name)
+                # values
+                grp.create_dataset('values', data=obj.values,
+                                   compression='gzip', chunks=True)
+                # column & index labels as fixed-length ASCII
+                dt = h5py.string_dtype(encoding='utf-8')
+                grp.create_dataset('columns',
+                                   data=np.array(obj.columns.astype(str), dtype=dt))
+                grp.create_dataset('index',
+                                   data=np.array(obj.index.astype(str), dtype=dt))
+            else:
+                # fallback: pickle anything else into an HDF5 attribute
+                import pickle
+                f.attrs[name] = np.void(pickle.dumps(obj))
+
 
 # File/Video Initialization
 root = Tk()
@@ -225,7 +255,7 @@ with PdfPages(filename) as pdf:
         # Mouse position with head direction color coding
         ax9 = plt.subplot(529)
         ax9.plot(ch_points_x, ch_points_y, ".", markersize=0.5, color='lightgrey', alpha=0.3, rasterized=True)
-        scatter = ax9.scatter(mouse_xs[i], mouse_ys[i], c=cell_hds[i], cmap='hsv', vmin=0, vmax=360, s=25, alpha=1.0, zorder=10, rasterized=True)
+        scatter = ax9.scatter(mouse_xs[i], mouse_ys[i], c=cell_hds[i], cmap='hsv', vmin=0, vmax=360, s=5, alpha=1.0, zorder=10, rasterized=True)
         cbar = plt.colorbar(scatter)
         cbar.set_label('Head Direction (degrees)')
         ax9.set_xlabel('Mouse X Position')
@@ -236,7 +266,7 @@ with PdfPages(filename) as pdf:
         # Mouse position with body direction color coding
         ax10 = plt.subplot(5, 2, 10)
         ax10.plot(ch_points_x, ch_points_y, ".", markersize=0.5, color='lightgrey', alpha=0.3, rasterized=True)
-        scatter2 = ax10.scatter(mouse_xsb[i], mouse_ysb[i], c=cell_bds[i], cmap='hsv', vmin=0, vmax=360, s=25, alpha=1.0, zorder=10, rasterized=True)
+        scatter2 = ax10.scatter(mouse_xsb[i], mouse_ysb[i], c=cell_bds[i], cmap='hsv', vmin=0, vmax=360, s=5, alpha=1.0, zorder=10, rasterized=True)
         cbar = plt.colorbar(scatter2)
         cbar.set_label('Head Direction (degrees)')
         ax10.set_xlabel('Mouse X Position')
@@ -246,3 +276,13 @@ with PdfPages(filename) as pdf:
 
         fig.tight_layout()
         pdf.savefig(fig)
+
+names = ['head_plot_data','head_bin_edges','body_plot_data','body_bin_edges','place_cell_plots','x_edges','y_edges','velocity_list','spike_list','spike_avg_list',
+         'std_error_lower','std_error_upper','timeInSeconds','mouse_xs','mouse_ys','cell_hds','ch_points_x','ch_points_y','mouse_xsb','mouse_ysb','cell_bds',
+         'ch_points_x','ch_points_y','MRLs_h','Mrlthresh_h','MALs_h','head_ebc_plot_data','head_distance_bins','ebc_plot_data_binary_head','max_bins_head',
+         'pref_dist_head','MRLs_b','Mrlthresh_b','MALs_b','body_ebc_plot_data','body_distance_bins','ebc_plot_data_binary','max_bins','pref_dist_body',
+         'MRLS_1','MRLS_2','MALS_1','MALS_2','pref_dist_1','pref_dist_2','MRLS_1_h','MRLS_2_h','MALS_1_h','MALS_2_h','pref_dist_1_h','pref_dist_2_h']
+
+to_save = {n: locals()[n] for n in names}
+h5file_name = dlc_phy_file[:-3] + "_analyzed.h5"
+save_to_h5(h5file_name, **to_save)

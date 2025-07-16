@@ -141,13 +141,13 @@ def bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_d
         cell_spikes_egocentric = model_data_df['egocentric'].loc[sp_count_ind]  
         
         cell_spikes_avg = np.sum(cell_spikes_egocentric,axis = 0)
+    
+       #"half the arena size" filter
+        cell_spikes_avg = cell_spikes_avg[:dist_bins,:]
         
         cell_spikes_avg = np.divide(cell_spikes_avg,ebc_data_avg)
         
         cell_spikes_avg[np.isnan(cell_spikes_avg)] = 0
-
-        #"half the arena size" filter
-        cell_spikes_avg = cell_spikes_avg[:dist_bins]
 
         ebc_plot_data.append(cell_spikes_avg)
 
@@ -208,6 +208,10 @@ def bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_d
             cell_spikes_egocentric = model_data_df['egocentric'].loc[sp_count_ind]  
 
             cell_spikes_avg = np.sum(cell_spikes_egocentric,axis = 0)
+
+            #"half the arena size" filter
+            cell_spikes_avg = cell_spikes_avg[:dist_bins,:]
+
             cell_spikes_avg = np.divide(cell_spikes_avg,ebc_data_avg)
             
             cell_spikes_avg[np.isnan(cell_spikes_avg)] = 0

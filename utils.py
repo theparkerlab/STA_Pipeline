@@ -32,7 +32,7 @@ def plot_polar_plot(bin_counts,bin_edges,i, bin_width):
     ax.set_title('Cell Number: '+str(i))
     ax.set_theta_zero_location('N')  # Set 0 degrees to the top
     ax.set_theta_direction(1)  # Clockwise
-
+    plt.close(fig)
     return fig, ax
 
 def plot_ebc(data,i,distance_bins,angle_bin_size, pixels_per_cm):
@@ -52,6 +52,7 @@ def plot_ebc(data,i,distance_bins,angle_bin_size, pixels_per_cm):
     ax.set_theta_offset(np.pi / 2)
     # ax.set_rticks([0, 200, 400, 600, 800, 1000],labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200/pixels_per_cm)))  # Less radial ticks
     fig.colorbar(pc)
+    plt.close(fig)
     return fig
 
 def plot_ebc_head(data,i,distance_bins,angle_bin_size, pixels_per_cm):
@@ -72,6 +73,7 @@ def plot_ebc_head(data,i,distance_bins,angle_bin_size, pixels_per_cm):
     # ax.set_thetagrids([0, 45, 90, 135, 180, 225, 270, 315], labels=['90°', '135°', '180°', '225°', '270°', '315°', '0°', '45°'])
     # ax.set_rticks([0, 200, 400, 600, 800, 1000],labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200/pixels_per_cm)))  # Less radial ticks
     fig.colorbar(pc)
+    plt.close(fig)
     return fig
 
 def filter_and_interpolate(dlc_df,columns_of_interest,likelihood_threshold,model_dt,fps):
@@ -209,12 +211,13 @@ def corners(point,dlc_df, point_likelihood, likelihood_threshold):
 
     return np.nanmean(vals)
 
-def plot_2d_hist(bin_counts, x_edges,y_edges):
+def plot_2d_hist(bin_counts, x_edges,y_edges,i):
     fig = plt.figure(figsize=(10, 8))
     plt.imshow(bin_counts, origin='lower', aspect='auto',
             extent=[x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]])
     plt.colorbar(label='spikes')
     plt.xlabel('X Position')
     plt.ylabel('Y Position')
-    plt.title('2D Histogram of spikes')
+    plt.title('Cell Number: '+str(i))
+    plt.close(fig)
     return fig

@@ -51,7 +51,8 @@ def process_half(dlc_df_half, columns_of_interest, likelihood_threshold, model_d
     ebc_data = calaculate_ebc_head(dlc_df_half, center_neck_x, center_neck_y, center_haunch_x, center_haunch_y, ebc_angle_bin_size, ebc_dist_bin_size)
     distance_bins, angle_bins = ebc_bins(dlc_df_half, ebc_angle_bin_size, ebc_dist_bin_size)
     
-    ebc_data_avg = np.sum(ebc_data, axis=0)
+    ebc_data_avg = np.sum(ebc_data,axis=0)
+    ebc_data_avg = ebc_data_avg[:dist_bins, :]
     distance_bins = distance_bins[:dist_bins]
     rbins = distance_bins.copy()
     abins = np.linspace(0, 2*np.pi, 121)
@@ -97,9 +98,12 @@ def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins, ebc_angle_bin
         cell_spikes_egocentric = model_data_df['egocentric'].loc[sp_count_ind]  
 
         cell_spikes_avg = np.sum(cell_spikes_egocentric, axis=0)
-
+        
+        #"occupancy" data
         ebc_data_avg = np.sum(np.array(model_data_df['egocentric']), axis=0)
-        cell_spikes_avg = np.divide(cell_spikes_avg, ebc_data_avg)
+        
+        #adding 1 to the occupancy data to avoid dividing by zero (PRLP 7/14/25)
+        cell_spikes_avg = np.divide(cell_spikes_avg, (ebc_data_avg+1))
         
         cell_spikes_avg[np.isnan(cell_spikes_avg)] = 0
         

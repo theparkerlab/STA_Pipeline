@@ -76,7 +76,7 @@ def place_cells(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, 
         # Normalize spike counts by bin counts to get average spike count per bin
         bin_spike_counts_avg = np.round(np.divide(spike_bin_counts, bin_counts, out=np.zeros_like(spike_bin_counts), where=bin_counts != 0), 2)
 
-        fig = plot_2d_hist(bin_spike_counts_avg, x_edges, y_edges)
+        fig = plot_2d_hist(bin_spike_counts_avg, x_edges, y_edges,i)
 
         plot_data.append(bin_spike_counts_avg)
         pp.savefig(fig)
