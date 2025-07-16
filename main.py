@@ -14,6 +14,7 @@ from PIL import Image
 from tkinter import Tk
 from tkinter.filedialog import askdirectory
 import h5py
+import joblib
 
 # Custom imports from specific modules
 from speed import speedPlots
@@ -84,8 +85,10 @@ print('you have selected: ', path)
 dlc_phy_file = find('*topDLCephys.h5', path)
 
 # Load data into dataframes
+print('loading DLC and ephys data...')
 dlc_df = pd.read_hdf(dlc_phy_file, 'dlc_df')
 phy_df = pd.read_hdf(dlc_phy_file, 'phy_df')
+print('done loading DLC and ephys data.')
 
 # Set parameters for analysis
 fps = 59.99
@@ -100,29 +103,40 @@ pixels_per_cm = (dlc_df[dlc_df['top_right likelihood'] > 0.95]['top_right x'].me
 print("P/CM: " + str(pixels_per_cm))
 
 # Run analyses for head and body direction, and place cells
+print('analyzing head direction...')
 head_plot_data, head_bin_edges = head_direction(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold)
+print('analyzing movement direction...')
 body_plot_data, body_bin_edges = body_direction(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold)
+print('analyzing allocentric...')
 place_cell_plots, x_edges, y_edges = place_cells(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold)
+print('analyzing velocity...')
 velocity_list, spike_list, spike_avg_list, std_error_lower, std_error_upper, timeInSeconds = speedPlots(dlc_df, phy_df, dlc_phy_file)
 
 # Run trajectory analyses for head and body
+print('getting head trajectories...')
 mouse_xs, mouse_ys, cell_hds, ch_points_x, ch_points_y = trajectory_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold)
+print('getting body trajectories...')
 mouse_xsb, mouse_ysb, cell_bds, ch_points_x, ch_points_y = trajectory_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold)
 
 # Bootstrap analyses for egocentric head and body
+print('analyzing egocentric head...')
 MRLs_h, Mrlthresh_h, MALs_h, head_ebc_plot_data, head_distance_bins, ebc_plot_data_binary_head, max_bins_head, pref_dist_head = bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
+print('analyzing egocentric movement direction...')
 MRLs_b, Mrlthresh_b, MALs_b, body_ebc_plot_data, body_distance_bins, ebc_plot_data_binary, max_bins, pref_dist_body = bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
 
 # Half-check for consistency in analysis
-half_check_file = dlc_phy_file[:-3] + '_half_ebc_body_data'
-MRLS_1, MRLS_2, MALS_1, MALS_2, pref_dist_1, pref_dist_2 = egocentric_body_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
-
+print('first vs. second half egocentric head...')
 half_check_file = dlc_phy_file[:-3] + '_half_ebc_head_data'
 MRLS_1_h, MRLS_2_h, MALS_1_h, MALS_2_h, pref_dist_1_h, pref_dist_2_h = egocentric_head_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
 
-print(len(MRLS_1), len(MRLS_2), len(MALS_1), len(MALS_2))
+print('first vs. second half egocentric movement direction...')
+half_check_file = dlc_phy_file[:-3] + '_half_ebc_body_data'
+MRLS_1, MRLS_2, MALS_1, MALS_2, pref_dist_1, pref_dist_2 = egocentric_body_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
+
+#print(len(MRLS_1), len(MRLS_2), len(MALS_1), len(MALS_2))
 
 # Classify cell types
+print('classifying cell types...')
 cell_type = classify_cell(dlc_df, phy_df, MRLs_h, Mrlthresh_h, MALs_h, pref_dist_head, MRLS_1_h, MRLS_2_h, MALS_1_h, MALS_2_h, MRLs_b, Mrlthresh_b, MALs_b, pref_dist_body, MRLS_1, MRLS_2, MALS_1, MALS_2, pref_dist_1, pref_dist_2, pref_dist_1_h, pref_dist_2_h)
 
 # Round analysis results for readability
@@ -141,13 +155,14 @@ MRLS_2_h = [round(num, 3) for num in MRLS_2_h]
 MALS_1_h = [round(num, 3) for num in MALS_1_h]
 MALS_2_h = [round(num, 3) for num in MALS_2_h]
 
-print(Mrlthresh_h)
+#print(Mrlthresh_h)
 
 # Define the PDF filename for saving plots
 filename = dlc_phy_file[:-3] + "angle_" + str(ebc_angle_bin_size) + "dis_" + str(ebc_dist_bin_size) + "_allPlots.pdf"
 
 #11/10/24 ask joy or krithik to modify these data that go into these plots to exclude the outer zone showing up as artifact (have to do this in the original calculation before MRL/MRA etc. are done)
 # Save plots to PDF
+print('creating PDF with plots...')
 with PdfPages(filename) as pdf:
     for i in range(len(head_plot_data)):
         # Create a subplot grid
@@ -276,13 +291,20 @@ with PdfPages(filename) as pdf:
 
         fig.tight_layout()
         pdf.savefig(fig)
+        plt.close(fig)
 
+print('done creating PDF.')
+
+print('saving variables to h5 file...')
 names = ['head_plot_data','head_bin_edges','body_plot_data','body_bin_edges','place_cell_plots','x_edges','y_edges','velocity_list','spike_list','spike_avg_list',
          'std_error_lower','std_error_upper','timeInSeconds','mouse_xs','mouse_ys','cell_hds','ch_points_x','ch_points_y','mouse_xsb','mouse_ysb','cell_bds',
          'ch_points_x','ch_points_y','MRLs_h','Mrlthresh_h','MALs_h','head_ebc_plot_data','head_distance_bins','ebc_plot_data_binary_head','max_bins_head',
          'pref_dist_head','MRLs_b','Mrlthresh_b','MALs_b','body_ebc_plot_data','body_distance_bins','ebc_plot_data_binary','max_bins','pref_dist_body',
          'MRLS_1','MRLS_2','MALS_1','MALS_2','pref_dist_1','pref_dist_2','MRLS_1_h','MRLS_2_h','MALS_1_h','MALS_2_h','pref_dist_1_h','pref_dist_2_h']
 
-to_save = {n: locals()[n] for n in names}
-h5file_name = dlc_phy_file[:-3] + "_analyzed.h5"
-save_to_h5(h5file_name, **to_save)
+to_save = {n: globals()[n] for n in names}
+joblib_name = dlc_phy_file[:-3] + "_analyzed.joblib"
+joblib.dump(to_save, joblib_name, compress=('lz4', 3))
+# …later…
+#loaded = joblib.load('all_data.joblib')
+print('done saving - analysis complete!')

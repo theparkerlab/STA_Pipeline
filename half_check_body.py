@@ -96,7 +96,9 @@ def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins, ebc_angle_bin
         cell_spikes_avg = np.sum(cell_spikes_egocentric, axis=0)
 
         ebc_data_avg = np.sum(np.array(model_data_df['egocentric']), axis=0)
-        cell_spikes_avg = np.divide(cell_spikes_avg, ebc_data_avg)
+        
+        #adding 1 to the occupancy data to avoid dividing by zero (PRLP 7/14/25)
+        cell_spikes_avg = np.divide(cell_spikes_avg, (ebc_data_avg+1))
         
         cell_spikes_avg[np.isnan(cell_spikes_avg)] = 0
         
