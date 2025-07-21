@@ -11,6 +11,7 @@ import matplotlib
 from matplotlib.backends.backend_pdf import PdfPages
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
+import cv2
 
 from utils import set_to_nan_based_on_likelihood, plot_ebc,filter_and_interpolate
 from egocentric_head import *
@@ -77,6 +78,7 @@ def bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_d
                binary plot data, max bins, and preferred distances.
     """
     columns_of_interest = ['neck', 'haunchC', 'time']
+    filt_size = 3 # size of bins for gaussian filter
     
     # Adding timestamps to dlc file and only considering columns of interest
     dlc_df['time'] = np.arange(len(dlc_df))/fps
@@ -148,6 +150,8 @@ def bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_d
         cell_spikes_avg = np.divide(cell_spikes_avg,ebc_data_avg)
         
         cell_spikes_avg[np.isnan(cell_spikes_avg)] = 0
+
+        cell_spikes_avg = cv2.GaussianBlur(cell_spikes_avg,(filt_size,filt_size),filt_size)
         
         ebc_plot_data.append(cell_spikes_avg)
 
@@ -222,6 +226,7 @@ def bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_d
                 
                 cell_spikes_avg[np.isnan(cell_spikes_avg)] = 0
                 
+                cell_spikes_avg = cv2.GaussianBlur(cell_spikes_avg,(filt_size,filt_size),filt_size)
 
                 shuffled_firing_rates = cell_spikes_avg.copy().T
                 theta = abins.copy()

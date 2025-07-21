@@ -10,6 +10,7 @@ import matplotlib
 from matplotlib.backends.backend_pdf import PdfPages
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
+import cv2
 
 from utils import set_to_nan_based_on_likelihood, plot_ebc, filter_and_interpolate
 from egocentric_head import *
@@ -35,6 +36,8 @@ def process_half(dlc_df_half, columns_of_interest, likelihood_threshold, model_d
     Returns:
         tuple: Processed model DataFrame with egocentric data, and the model time array.
     """
+    
+
     # Filter and interpolate
     model_data_df, model_t = filter_and_interpolate(dlc_df_half, columns_of_interest, likelihood_threshold, model_dt, fps)
     
@@ -61,7 +64,7 @@ def process_half(dlc_df_half, columns_of_interest, likelihood_threshold, model_d
     
     return model_data_df, model_t
 
-def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins, ebc_angle_bin_size, dist_bins):
+def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins, ebc_angle_bin_size, dist_bins,fps):
     """
     Calculate mean resultant lengths (MRLs) and preferred distances for each cell's spike data.
 
@@ -75,6 +78,8 @@ def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins, ebc_angle_bin
     Returns:
         tuple: MRLs, mean angles, and preferred distances for each cell.
     """
+    filt_size = 3 # size of bins for gaussian filter
+    
     ebc_plot_data = []
     n = int(360 // ebc_angle_bin_size)  # number of orientation bins
     m = dist_bins   # number of distance bins
@@ -101,11 +106,19 @@ def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins, ebc_angle_bin
         
         #"occupancy" data
         ebc_data_avg = np.sum(np.array(model_data_df['egocentric']), axis=0)
-        
+        ebc_data_avg = ebc_data_avg[:dist_bins, :]
+
+        #"half the arena size" filter
+        cell_spikes_avg = cell_spikes_avg[:dist_bins,:]
+
         #adding 1 to the occupancy data to avoid dividing by zero (PRLP 7/14/25)
         cell_spikes_avg = np.divide(cell_spikes_avg, (ebc_data_avg+1))
         
         cell_spikes_avg[np.isnan(cell_spikes_avg)] = 0
+
+        cell_spikes_avg = np.multiply(cell_spikes_avg, fps)
+
+        cell_spikes_avg = cv2.GaussianBlur(cell_spikes_avg,(filt_size,filt_size),filt_size)
         
         ebc_plot_data.append(cell_spikes_avg)
 
@@ -171,7 +184,7 @@ def egocentric_head_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_
     abins = np.linspace(0, 2*np.pi, (360 // ebc_angle_bin_size))
 
     half_check_file = file[:-3]+'_half_ebc_head_data'
-    MRLS_1, MALS_1,pref_dist_1 = calc_mrls(model_data_df_1, phy_df, cell_numbers, model_t1, abins, ebc_angle_bin_size, dist_bins)
-    MRLS_2, MALS_2,pref_dist_2 = calc_mrls(model_data_df_2, phy_df, cell_numbers, model_t2, abins, ebc_angle_bin_size, dist_bins)
+    MRLS_1, MALS_1,pref_dist_1 = calc_mrls(model_data_df_1, phy_df, cell_numbers, model_t1, abins, ebc_angle_bin_size, dist_bins,fps)
+    MRLS_2, MALS_2,pref_dist_2 = calc_mrls(model_data_df_2, phy_df, cell_numbers, model_t2, abins, ebc_angle_bin_size, dist_bins,fps)
 
     return MRLS_1, MRLS_2, MALS_1, MALS_2,pref_dist_1,pref_dist_2

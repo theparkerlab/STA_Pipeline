@@ -12,6 +12,7 @@ import os
 import ray
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
+import cv2
 
 from utils import set_to_nan_based_on_likelihood, plot_ebc_head,filter_and_interpolate
 
@@ -245,6 +246,7 @@ def egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_wid
     """
 
     columns_of_interest = ['driveL','driveR', 'time']
+    filt_size = 3 # size of bins for gaussian filter
 
     # Adding timestamps to dlc file and only considering columns of interest
     dlc_df['time'] = np.arange(len(dlc_df))/fps
@@ -307,6 +309,8 @@ def egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_wid
 
         cell_spikes_avg[np.isnan(cell_spikes_avg)] = 0
         cell_spikes_avg = np.multiply(cell_spikes_avg, fps)
+
+        cell_spikes_avg = cv2.GaussianBlur(cell_spikes_avg,(filt_size,filt_size),filt_size)
 
         ebc_plot_data.append(cell_spikes_avg)
 
