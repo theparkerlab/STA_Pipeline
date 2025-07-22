@@ -150,6 +150,7 @@ def bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_d
         cell_spikes_avg = np.divide(cell_spikes_avg,ebc_data_avg)
         
         cell_spikes_avg[np.isnan(cell_spikes_avg)] = 0
+        cell_spikes_avg = np.multiply(cell_spikes_avg, fps)
 
         cell_spikes_avg = cv2.GaussianBlur(cell_spikes_avg,(filt_size,filt_size),filt_size)
         
