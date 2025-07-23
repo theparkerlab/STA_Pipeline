@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
 import matplotlib
+import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
@@ -80,6 +81,7 @@ def place_cells(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, 
 
         plot_data.append(bin_spike_counts_avg)
         pp.savefig(fig)
+        plt.close(fig)
     
     pp.close()
 

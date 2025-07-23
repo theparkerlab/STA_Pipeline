@@ -12,6 +12,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 import cv2
+from tqdm import tqdm
 
 from utils import set_to_nan_based_on_likelihood, plot_ebc,filter_and_interpolate
 from egocentric_head import *
@@ -124,7 +125,8 @@ def bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_d
     preferred_dist = []
 
 
-    for i in cell_numbers:
+    print('bootstrapping ego body...')
+    for i in tqdm(cell_numbers):
         spike_times = phy_df.loc[i]['spikeT']
 
         #removing spike times after camera stopped
@@ -197,49 +199,50 @@ def bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_d
         preferred_dist.append(max_firing_distance_bin)
 
         
-        bootstrap_file = file[:-3]+'_bootstrap_ebc_body_data'
-        if os.path.exists(bootstrap_file+'.npy'):
-            print('bootstrap file exists')
-            mrl_thresholds = np.load(bootstrap_file+'.npy')
+        # bootstrap_file = file[:-3]+'_bootstrap_ebc_body_data'
+        # if os.path.exists(bootstrap_file+'.npy'):
+        #     print('bootstrap file exists')
+        #     mrl_thresholds = np.load(bootstrap_file+'.npy')
 
-        else:
+        # else:
             
-            for _ in range(n_bootstrap):
+        for _ in range(n_bootstrap):
 
-                shuffled_spikes = shuffle_spike_train(spike_times, recording_duration)
+            shuffled_spikes = shuffle_spike_train(spike_times, recording_duration)
 
-                #binning spikes
-                sp_count_ind = np.digitize(shuffled_spikes,bins = model_t)
+            #binning spikes
+            sp_count_ind = np.digitize(shuffled_spikes,bins = model_t)
 
-                #-1 because np.digitze is 1-indexed
-                sp_count_ind = [i-1 for i in sp_count_ind]
+            #-1 because np.digitze is 1-indexed
+            sp_count_ind = [i-1 for i in sp_count_ind]
 
-                sp_count_ind = [i for i in sp_count_ind if i in model_data_df.index]
+            sp_count_ind = [i for i in sp_count_ind if i in model_data_df.index]
 
-                cell_spikes_egocentric = model_data_df['egocentric'].loc[sp_count_ind]  
+            cell_spikes_egocentric = model_data_df['egocentric'].loc[sp_count_ind]  
 
-                cell_spikes_avg = np.sum(cell_spikes_egocentric,axis = 0)
+            cell_spikes_avg = np.sum(cell_spikes_egocentric,axis = 0)
 
-                #"half the arena size" filter
-                cell_spikes_avg = cell_spikes_avg[:dist_bins,:]
+            #"half the arena size" filter
+            cell_spikes_avg = cell_spikes_avg[:dist_bins,:]
 
-                cell_spikes_avg = np.divide(cell_spikes_avg,ebc_data_avg)
-                
-                cell_spikes_avg[np.isnan(cell_spikes_avg)] = 0
-                
-                cell_spikes_avg = cv2.GaussianBlur(cell_spikes_avg,(filt_size,filt_size),filt_size)
-
-                shuffled_firing_rates = cell_spikes_avg.copy().T
-                theta = abins.copy()
-                MR = (1 / (n * m)) * np.sum(shuffled_firing_rates * np.exp(1j * theta[:, None]), axis=(0, 1))
-                MRL = np.abs(MR)
-
-                # Append to the shuffled MRLs list
-                shuffled_mrls.append(MRL)
-            mrl_threshold = np.percentile(shuffled_mrls, 99)
-            mrl_thresholds.append(mrl_threshold)
+            cell_spikes_avg = np.divide(cell_spikes_avg,ebc_data_avg)
             
-    np.save(bootstrap_file,np.array(mrl_thresholds))
+            cell_spikes_avg[np.isnan(cell_spikes_avg)] = 0
+            cell_spikes_avg = np.multiply(cell_spikes_avg, fps)
+            
+            cell_spikes_avg = cv2.GaussianBlur(cell_spikes_avg,(filt_size,filt_size),filt_size)
+
+            shuffled_firing_rates = cell_spikes_avg.copy().T
+            theta = abins.copy()
+            MR = (1 / (n * m)) * np.sum(shuffled_firing_rates * np.exp(1j * theta[:, None]), axis=(0, 1))
+            MRL = np.abs(MR)
+
+            # Append to the shuffled MRLs list
+            shuffled_mrls.append(MRL)
+        mrl_threshold = np.percentile(shuffled_mrls, 99)
+        mrl_thresholds.append(mrl_threshold)
+            
+    # np.save(bootstrap_file,np.array(mrl_thresholds))
 
 
     return MRLS,mrl_thresholds,MALS,ebc_plot_data, distance_bins, ebc_plot_data_binary, max_bins, preferred_dist

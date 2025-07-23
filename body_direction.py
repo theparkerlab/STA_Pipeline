@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
 import matplotlib
+import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
@@ -64,6 +65,7 @@ def body_direction(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_widt
 
         plot_data.append(bin_spike_counts_avg)
         pp.savefig(fig)
+        plt.close(fig)
     
     pp.close()
     print(len(model_t))

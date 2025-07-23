@@ -11,6 +11,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 import cv2
+from tqdm import tqdm
 
 from utils import set_to_nan_based_on_likelihood, plot_ebc,filter_and_interpolate
 from egocentric_head import *
@@ -124,7 +125,8 @@ def bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_d
     mrl_thresholds = []
     preferred_dist = []
 
-    for i in cell_numbers:
+    print('bootstrapping ego head...')
+    for i in tqdm(cell_numbers):
         spike_times = phy_df.loc[i]['spikeT']
 
         #removing spike times after camera stopped
@@ -197,7 +199,7 @@ def bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_d
         preferred_dist.append(max_firing_distance_bin)
 
 
-        bootstrap_file = file[:-3]+'_bootstrap_ebc_head_data'
+        # bootstrap_file = file[:-3]+'_bootstrap_ebc_head_data'
         for _ in range(n_bootstrap):
 
             shuffled_spikes = shuffle_spike_train(spike_times, recording_duration)

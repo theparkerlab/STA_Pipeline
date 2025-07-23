@@ -15,6 +15,9 @@ from tkinter import Tk
 from tkinter.filedialog import askdirectory
 import h5py
 import joblib
+from tqdm import tqdm
+import warnings
+warnings.filterwarnings("ignore")
 
 # Custom imports from specific modules
 from speed import speedPlots
@@ -131,13 +134,39 @@ MRLS_1_h, MRLS_2_h, MALS_1_h, MALS_2_h, pref_dist_1_h, pref_dist_2_h = egocentri
 
 print('first vs. second half egocentric movement direction...')
 half_check_file = dlc_phy_file[:-3] + '_half_ebc_body_data'
-MRLS_1, MRLS_2, MALS_1, MALS_2, pref_dist_1, pref_dist_2 = egocentric_body_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
+MRLS_1_b, MRLS_2_b, MALS_1_b, MALS_2_b, pref_dist_1_b, pref_dist_2_b = egocentric_body_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
 
 #print(len(MRLS_1), len(MRLS_2), len(MALS_1), len(MALS_2))
 
 # Classify cell types
 print('classifying cell types...')
-cell_type = classify_cell(dlc_df, phy_df, MRLs_h, Mrlthresh_h, MALs_h, pref_dist_head, MRLS_1_h, MRLS_2_h, MALS_1_h, MALS_2_h, MRLs_b, Mrlthresh_b, MALs_b, pref_dist_body, MRLS_1, MRLS_2, MALS_1, MALS_2, pref_dist_1, pref_dist_2, pref_dist_1_h, pref_dist_2_h)
+# cell_type = classify_cell(dlc_df, phy_df, MRLs_h, Mrlthresh_h, MALs_h, pref_dist_head, MRLS_1_h, MRLS_2_h, MALS_1_h, MALS_2_h, MRLs_b, Mrlthresh_b, MALs_b, pref_dist_body, MRLS_1_b, MRLS_2_b, MALS_1_b, MALS_2_b, pref_dist_1_b, pref_dist_2_b, pref_dist_1_h, pref_dist_2_h)
+
+ref_frames, cell_types, MRLS_1 ,MRLS_2, MALS_1, MALS_2, pref_dist_1, pref_dist_2, Mrlthresh = ([] for i in range(9))
+
+for i in range(len(phy_df)):
+    head_MRL = MRLs_h[i]
+    body_MRL = MRLs_b[i]
+    if head_MRL > body_MRL:
+        MRLS_1.append(MRLS_1_h[i])
+        MRLS_2.append(MRLS_2_h[i])
+        MALS_1.append(MALS_1_h[i])
+        MALS_2.append(MALS_2_h[i])
+        pref_dist_1.append(pref_dist_1_h[i])
+        pref_dist_2.append(pref_dist_2_h[i])
+        Mrlthresh.append(Mrlthresh_h[i])
+        ref_frames.append('head')
+    else:
+        MRLS_1.append(MRLS_1_b[i])
+        MRLS_2.append(MRLS_2_b[i])
+        MALS_1.append(MALS_1_b[i])
+        MALS_2.append(MALS_2_b[i])
+        pref_dist_1.append(pref_dist_1_b[i])
+        pref_dist_2.append(pref_dist_2_b[i])
+        Mrlthresh.append(Mrlthresh_b[i])
+        ref_frames.append('body')
+
+cell_types = classify_cell(dlc_df,phy_df,MRLS_1, MRLS_2, MALS_1, MALS_2,pref_dist_1,pref_dist_2,Mrlthresh)
 
 # Round analysis results for readability
 MRLs_h = [round(num, 3) for num in MRLs_h]
@@ -146,10 +175,10 @@ MALs_h = [round(num, 3) for num in MALs_h]
 MRLs_b = [round(num, 3) for num in MRLs_b]
 Mrlthresh_b = [round(num, 3) for num in Mrlthresh_b]
 MALs_b = [round(num, 3) for num in MALs_b]
-MRLS_1 = [round(num, 3) for num in MRLS_1]
-MRLS_2 = [round(num, 3) for num in MRLS_2]
-MALS_1 = [round(num, 3) for num in MALS_1]
-MALS_2 = [round(num, 3) for num in MALS_2]
+MRLS_1_b = [round(num, 3) for num in MRLS_1_b]
+MRLS_2_b = [round(num, 3) for num in MRLS_2_b]
+MALS_1_b = [round(num, 3) for num in MALS_1_b]
+MALS_2_b = [round(num, 3) for num in MALS_2_b]
 MRLS_1_h = [round(num, 3) for num in MRLS_1_h]
 MRLS_2_h = [round(num, 3) for num in MRLS_2_h]
 MALS_1_h = [round(num, 3) for num in MALS_1_h]
@@ -162,12 +191,12 @@ filename = dlc_phy_file[:-3] + "angle_" + str(ebc_angle_bin_size) + "dis_" + str
 
 #11/10/24 ask joy or krithik to modify these data that go into these plots to exclude the outer zone showing up as artifact (have to do this in the original calculation before MRL/MRA etc. are done)
 # Save plots to PDF
-print('creating PDF with plots...')
+print('creating final PDF with plots...')
 with PdfPages(filename) as pdf:
-    for i in range(len(head_plot_data)):
+    for i in tqdm(range(len(head_plot_data))):
         # Create a subplot grid
         fig, ((ax1, ax2), (ax3, ax4), (ax5, ax6), (ax7, ax8), (ax9, ax10)) = plt.subplots(5, 2, figsize=(12, 12))
-        fig.suptitle("Cell: " + str(phy_df.index[i]) + " cell type: " + cell_type[i])
+        fig.suptitle("Cell: " + str(phy_df.index[i]) + " cell type: " + cell_types[i])
 
         # Plot head direction in polar coordinates
         ax1 = plt.subplot(521, projection='polar')
@@ -213,8 +242,8 @@ with PdfPages(filename) as pdf:
         ax4.set_theta_offset(np.pi / 2.0)
         # ax4.set_rticks([0, 200, 400, 600, 800, 1000], labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200 / pixels_per_cm)))
         ax4.set_title(f"MRL: {MRLs_b[i]:.3f} | MRA: {MALs_b[i]:.3f} | "
-                      f"MRL_1: {MRLS_1[i]:.3f} | MRL_2: {MRLS_2[i]:.3f} | "
-                      f"MRA_1: {MALS_1[i]:.3f} | MRA_2: {MALS_2[i]:.3f} | "
+                      f"MRL_1: {MRLS_1_b[i]:.3f} | MRL_2: {MRLS_2_b[i]:.3f} | "
+                      f"MRA_1: {MALS_1_b[i]:.3f} | MRA_2: {MALS_2_b[i]:.3f} | "
                       f"MRL_thresh: {Mrlthresh_b[i]:.3f}", fontsize=8)
         ax4.axis('off')
         fig.colorbar(pc)
@@ -244,8 +273,8 @@ with PdfPages(filename) as pdf:
         r_min, r_max = rbins[max_idx[0]], rbins[np.clip(max_idx[0] + 1, 0, len(rbins) - 1)]
         theta_min, theta_max = abins[max_idx[1]], abins[np.clip(max_idx[1] + 1, 0, len(abins) - 1)]
         ax6.pcolormesh([theta_min, theta_max], [r_min, r_max], np.array([[body_ebc_plot_data[i][max_idx]]]), cmap="coolwarm")
-        ax6.set_title(f"Preferred_dist: {pref_dist_body[i]:.3f} | Preferred_dist_1: {pref_dist_1[i]:.3f} | "
-                      f"Preferred_dist_2: {pref_dist_2[i]:.3f}", fontsize=8)
+        ax6.set_title(f"Preferred_dist: {pref_dist_body[i]:.3f} | Preferred_dist_1: {pref_dist_1_b[i]:.3f} | "
+                      f"Preferred_dist_2: {pref_dist_2_b[i]:.3f}", fontsize=8)
         ax6.plot([0, max_bins[i][0]], [0, max_bins[i][1]], color='black', linestyle='--')
         ax6.axis('off')
 
@@ -295,12 +324,12 @@ with PdfPages(filename) as pdf:
 
 print('done creating PDF.')
 
-print('saving variables to h5 file...')
-names = ['cell_type','head_plot_data','head_bin_edges','body_plot_data','body_bin_edges','place_cell_plots','x_edges','y_edges','velocity_list','spike_list','spike_avg_list',
+print('saving variables to joblib file...')
+names = ['cell_types','ref_frames','head_plot_data','head_bin_edges','body_plot_data','body_bin_edges','place_cell_plots','x_edges','y_edges','velocity_list','spike_list','spike_avg_list',
          'std_error_lower','std_error_upper','timeInSeconds','mouse_xs','mouse_ys','cell_hds','ch_points_x','ch_points_y','mouse_xsb','mouse_ysb','cell_bds',
          'ch_points_x','ch_points_y','MRLs_h','Mrlthresh_h','MALs_h','head_ebc_plot_data','head_distance_bins','ebc_plot_data_binary_head','max_bins_head',
          'pref_dist_head','MRLs_b','Mrlthresh_b','MALs_b','body_ebc_plot_data','body_distance_bins','ebc_plot_data_binary','max_bins','pref_dist_body',
-         'MRLS_1','MRLS_2','MALS_1','MALS_2','pref_dist_1','pref_dist_2','MRLS_1_h','MRLS_2_h','MALS_1_h','MALS_2_h','pref_dist_1_h','pref_dist_2_h']
+         'MRLS_1_b','MRLS_2_b','MALS_1_b','MALS_2_b','pref_dist_1_b','pref_dist_2_b','MRLS_1_h','MRLS_2_h','MALS_1_h','MALS_2_h','pref_dist_1_h','pref_dist_2_h']
 
 to_save = {n: globals()[n] for n in names}
 joblib_name = dlc_phy_file[:-3] + "_analyzed.joblib"

@@ -347,6 +347,7 @@ def egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_wid
         fig = plot_ebc_head(ebc_plot_data[i][:dist_bins],i, distance_bins[:dist_bins],ebc_angle_bin_size, pixels_per_cm)
         plots.append(fig)
         pp.savefig(fig)
+        plt.close(fig)
 
     pp.close()
     
