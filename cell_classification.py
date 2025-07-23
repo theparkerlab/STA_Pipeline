@@ -32,7 +32,7 @@ def classify_cell(dlc_df,phy_df,MRLS_1, MRLS_2, MALS_1, MALS_2,pref_dist_1,pref_
         # (3) The change in Mean Resultant Angle (MRA) between the 1st and 2nd half was <45°
         # Assuming MALS_1 and MALS_2 are given in radians, convert to degrees if necessary
         change_in_MRA = np.abs(np.degrees(MALS_1[i] - MALS_2[i]))
-        condition_3 = change_in_MRA < 0.785 #45 deg in radians
+        condition_3 = change_in_MRA < 45
 
         # (4) The change in preferred boundary distance between the 1st and 2nd half was <75% of the preferred distance for the whole session
         change_in_pref_dist = np.abs(pref_dist_1[i] - pref_dist_2[i])
