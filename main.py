@@ -124,8 +124,18 @@ mouse_xsb, mouse_ysb, cell_bds, ch_points_x, ch_points_y = trajectory_body(dlc_d
 # Bootstrap analyses for egocentric head and body
 print('analyzing egocentric head...')
 MRLs_h, Mrlthresh_h, MALs_h, head_ebc_plot_data, head_distance_bins, ebc_plot_data_binary_head, max_bins_head, pref_dist_head = bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
+print()
+print('\nHead MRLs:')
+for i, mrl in enumerate(MRLs_h):
+    print(f'  Cell {i}: MRL = {mrl:.4f}')
+
 print('analyzing egocentric movement direction...')
 MRLs_b, Mrlthresh_b, MALs_b, body_ebc_plot_data, body_distance_bins, ebc_plot_data_binary, max_bins, pref_dist_body = bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, dlc_phy_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
+
+
+print('\nBody MRLs:')
+for i, mrl in enumerate(MRLs_b):
+    print(f'  Cell {i}: MRL = {mrl:.4f}')
 
 # Half-check for consistency in analysis
 print('first vs. second half egocentric head...')

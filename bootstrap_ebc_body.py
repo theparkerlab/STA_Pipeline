@@ -149,7 +149,7 @@ def bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_d
         #"half the arena size" filter
         cell_spikes_avg = cell_spikes_avg[:dist_bins,:]
 
-        cell_spikes_avg = np.divide(cell_spikes_avg,ebc_data_avg)
+        cell_spikes_avg = np.divide(cell_spikes_avg,ebc_data_avg) 
         
         cell_spikes_avg[np.isnan(cell_spikes_avg)] = 0
         cell_spikes_avg = np.multiply(cell_spikes_avg, fps)
@@ -159,8 +159,14 @@ def bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_d
         ebc_plot_data.append(cell_spikes_avg)
 
         firing_rates = cell_spikes_avg.copy().T
+        mean_firing_rate = np.mean(firing_rates)
+
         theta = abins.copy()
         MR = (1 / (n * m)) * np.sum(firing_rates * np.exp(1j * theta[:, None]), axis=(0, 1))
+
+        #normalize mean resultant
+        MR = MR / mean_firing_rate if mean_firing_rate !=0 else 0
+        
         MRL = np.abs(MR)
         MRA = np.angle(MR)
 
@@ -168,7 +174,7 @@ def bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_d
         MALS.append(MRA)
 
         #75% threshold    
-        max_idx = np.unravel_index(np.argmax(cell_spikes_avg[:24], axis=None), cell_spikes_avg[:24].shape)
+        max_idx = np.unravel_index(np.argmax(cell_spikes_avg, axis=None), cell_spikes_avg.shape)
 
         # Corresponding radius and angle for the maximum value
         max_radius = rbins[max_idx[0]]
@@ -189,12 +195,13 @@ def bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_d
         # Here we're assuming you calculate this by taking the firing rates at the closest orientation to MRA
         preferred_orientation_idx = np.argmin(np.abs(theta - MRA))
         firing_rate_vector = firing_rates[preferred_orientation_idx, :]
+        max_firing_distance_bin = np.argmax(firing_rate_vector)
 
         # Fit a Weibull distribution
-        params = weibull_min.fit(firing_rate_vector)
+        # params = weibull_min.fit(firing_rate_vector)
 
         # Get the distance bin with the maximum estimated firing rate
-        max_firing_distance_bin = np.argmax(weibull_min.pdf(np.arange(m), *params))
+        # max_firing_distance_bin = np.argmax(weibull_min.pdf(np.arange(m), *params)) #not fitting correctly, turned off PRLP 7/28/25
 
         preferred_dist.append(max_firing_distance_bin)
 
@@ -225,16 +232,21 @@ def bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_d
             #"half the arena size" filter
             cell_spikes_avg = cell_spikes_avg[:dist_bins,:]
 
-            cell_spikes_avg = np.divide(cell_spikes_avg,ebc_data_avg)
-            
+            cell_spikes_avg = np.divide(cell_spikes_avg,ebc_data_avg) 
+
             cell_spikes_avg[np.isnan(cell_spikes_avg)] = 0
             cell_spikes_avg = np.multiply(cell_spikes_avg, fps)
             
             cell_spikes_avg = cv2.GaussianBlur(cell_spikes_avg,(filt_size,filt_size),filt_size)
-
+            
             shuffled_firing_rates = cell_spikes_avg.copy().T
+            mean_shuffled_firing_rates = np.mean(shuffled_firing_rates)
+
             theta = abins.copy()
             MR = (1 / (n * m)) * np.sum(shuffled_firing_rates * np.exp(1j * theta[:, None]), axis=(0, 1))
+            #normalize mean resultant
+            MR = MR / mean_shuffled_firing_rates if mean_shuffled_firing_rates !=0 else 0
+
             MRL = np.abs(MR)
 
             # Append to the shuffled MRLs list

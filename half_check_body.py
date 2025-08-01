@@ -126,12 +126,13 @@ def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins, ebc_angle_bin
 
         preferred_orientation_idx = np.argmin(np.abs(theta - MRA))
         firing_rate_vector = firing_rates[preferred_orientation_idx, :]
+        max_firing_distance_bin = np.argmax(firing_rate_vector)
 
         # Fit a Weibull distribution
-        params = weibull_min.fit(firing_rate_vector)
+        # params = weibull_min.fit(firing_rate_vector)
 
         # Get the distance bin with the maximum estimated firing rate
-        max_firing_distance_bin = np.argmax(weibull_min.pdf(np.arange(m), *params))
+        # max_firing_distance_bin = np.argmax(weibull_min.pdf(np.arange(m), *params))  #not fitting correctly, turned off PRLP 7/28/25
 
         preferred_dist.append(max_firing_distance_bin)
     return MRLS, MALS,preferred_dist
