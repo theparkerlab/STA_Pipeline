@@ -51,7 +51,8 @@ root.withdraw()
 path = askdirectory(title='Choose experiment folder', initialdir=r'\\rhea\E\ephys') # show an "Open" dialog box and return the path to the selected file
 print('you have selected: ', path)
 
-lightPath = findDir("FM_LIGHT", path)
+#there is a light path and a dark path, the folder names sometimes vary so we want to find a folder with "light" in the name and one with "dark" in the name that is case insensitive
+lightPath = findDir("*light*", path.lower())
 print(lightPath)
 dlc_phy_file_light = find('*topDLCephys.h5',lightPath)
 
@@ -59,7 +60,7 @@ dlc_df_light = pd.read_hdf(dlc_phy_file_light, 'dlc_df')
 phy_df_light = pd.read_hdf(dlc_phy_file_light,'phy_df')
 
 
-darkPath = findDir("FM_DARK", path)
+darkPath = findDir("*dark*", path.lower())
 print(darkPath)
 dlc_phy_file_light = find('*topDLCephys.h5',lightPath)
 

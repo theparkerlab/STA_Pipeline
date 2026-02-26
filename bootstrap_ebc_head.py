@@ -127,6 +127,7 @@ def bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_d
 
     print('bootstrapping ego head...')
     for i in tqdm(cell_numbers):
+        print(f'bootstrapping unit {i}')
         spike_times = phy_df.loc[i]['spikeT']
 
         #removing spike times after camera stopped
