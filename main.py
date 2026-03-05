@@ -137,6 +137,9 @@ print('\nBody MRLs:')
 for i, mrl in enumerate(MRLs_b):
     print(f'  Cell {i}: MRL = {mrl:.4f}')
 
+## DOUBLE check that this is working correctly (only looking at first vs. second half of dataset)
+## right now it's splitting the DLC data in half in half_check.py, are the correct time values in place and are the spike times being correctly checked against the DLC times?
+## do we have to also split the spike times in half and feed those in...
 # Half-check for consistency in analysis
 print('first vs. second half egocentric head...')
 half_check_file = dlc_phy_file[:-3] + '_half_ebc_head_data'
@@ -152,7 +155,7 @@ MRLS_1_b, MRLS_2_b, MALS_1_b, MALS_2_b, pref_dist_1_b, pref_dist_2_b = egocentri
 print('classifying cell types...')
 # cell_type = classify_cell(dlc_df, phy_df, MRLs_h, Mrlthresh_h, MALs_h, pref_dist_head, MRLS_1_h, MRLS_2_h, MALS_1_h, MALS_2_h, MRLs_b, Mrlthresh_b, MALs_b, pref_dist_body, MRLS_1_b, MRLS_2_b, MALS_1_b, MALS_2_b, pref_dist_1_b, pref_dist_2_b, pref_dist_1_h, pref_dist_2_h)
 
-ref_frames, cell_types, MRLS_1 ,MRLS_2, MALS_1, MALS_2, pref_dist_1, pref_dist_2, Mrlthresh = ([] for i in range(9))
+ref_frames, cell_types, MRLS_1, MRLS_2, MALS_1, MALS_2, pref_dist_1, pref_dist_2, Mrlthresh, full_session_MRL = ([] for i in range(10))
 
 for i in range(len(phy_df)):
     head_MRL = MRLs_h[i]
@@ -165,6 +168,7 @@ for i in range(len(phy_df)):
         pref_dist_1.append(pref_dist_1_h[i])
         pref_dist_2.append(pref_dist_2_h[i])
         Mrlthresh.append(Mrlthresh_h[i])
+        full_session_MRL.append(MRLs_h[i])
         ref_frames.append('head')
     else:
         MRLS_1.append(MRLS_1_b[i])
@@ -174,9 +178,10 @@ for i in range(len(phy_df)):
         pref_dist_1.append(pref_dist_1_b[i])
         pref_dist_2.append(pref_dist_2_b[i])
         Mrlthresh.append(Mrlthresh_b[i])
+        full_session_MRL.append(MRLs_b[i])
         ref_frames.append('body')
 
-cell_types = classify_cell(dlc_df,phy_df,MRLS_1, MRLS_2, MALS_1, MALS_2,pref_dist_1,pref_dist_2,Mrlthresh)
+cell_types = classify_cell(dlc_df, phy_df, MRLS_1, MRLS_2, MALS_1, MALS_2, pref_dist_1, pref_dist_2, Mrlthresh, full_session_MRL)
 
 # Round analysis results for readability
 MRLs_h = [round(num, 3) for num in MRLs_h]

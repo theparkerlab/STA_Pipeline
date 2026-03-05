@@ -167,10 +167,10 @@ def egocentric_head_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_
     columns_of_interest = ['driveL', 'driveR', 'time']
 
     # Adding timestamps to dlc file and only considering columns of interest
-    dlc_df['time'] = np.arange(len(dlc_df)) / fps
+    dlc_df['time'] = np.arange(len(dlc_df)) / fps #is this working right? is the dt=1/fps? default for arange is 1...
 
     # Split dlc_df into two halves
-    half_len = len(dlc_df) // 2
+    half_len = len(dlc_df) // 2 
     dlc_df_1 = dlc_df.iloc[:half_len].copy()
     dlc_df_2 = dlc_df.iloc[half_len:].copy()
 
