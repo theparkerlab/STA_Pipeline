@@ -20,7 +20,7 @@ def classify_cell(dlc_df,phy_df,MRLS_1, MRLS_2, MALS_1, MALS_2,pref_dist_1,pref_
     cell_types = []
     rec_duration = len(dlc_df)/fps
     for i in range(len(phy_df)):
-        cell = phy_df.iloc[0]
+        cell = phy_df.iloc[i]
         firing_rate =  len(cell.spikeT)/rec_duration 
 
         # Condition 1: Cell firing rate must exceed threshold of 0.1 Hz
