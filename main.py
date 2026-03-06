@@ -219,37 +219,40 @@ MALS_2_h = [round(num, 3) for num in MALS_2_h]
 #print(Mrlthresh_h)
 
 # Define the PDF filename for saving plots
-filename = output_base + "angle_" + str(ebc_angle_bin_size) + "dis_" + str(ebc_dist_bin_size) + "_allPlots.pdf"
+filename = output_base + "angle_" + str(ebc_angle_bin_size) + "dis_" + str(ebc_dist_bin_size) + "_summary_plots.pdf"
 
 #11/10/24 ask joy or krithik to modify these data that go into these plots to exclude the outer zone showing up as artifact (have to do this in the original calculation before MRL/MRA etc. are done)
 # Save plots to PDF
 print('creating final PDF with plots...')
 with PdfPages(filename) as pdf:
     for i in tqdm(range(len(head_plot_data))):
-        # Create a subplot grid (no thresholded/binary EBC plots)
-        fig, ((ax1, ax2), (ax3, ax4), (ax5, ax6), (ax7, ax8)) = plt.subplots(4, 2, figsize=(12, 10))
+        # Create figure and subplots (scaled down 0.9 to avoid title/caption overlap)
+        fig = plt.figure(figsize=(10.8, 9))
         fig.suptitle(f"Cell: {phy_df.index[i]} | {cell_types[i]} | ref: {ref_frames[i]}")
+        gs = fig.add_gridspec(4, 2, hspace=0.42, wspace=0.35)
 
         # Plot head direction in polar coordinates
-        ax1 = plt.subplot(421, projection='polar')
+        ax1 = fig.add_subplot(gs[0, 0], projection='polar')
         bin_centers = (head_bin_edges[:-1] + head_bin_edges[1:]) / 2
         bin_centers_rad = np.deg2rad(bin_centers)
         ax1.bar(bin_centers_rad, head_plot_data[i], width=np.deg2rad(bin_width), edgecolor='k')
         ax1.set_title('Head Direction')
         ax1.set_theta_zero_location('N')
         ax1.set_theta_direction(-1)
+        ax1.set_frame_on(False)
 
         # Plot body direction in polar coordinates
-        ax2 = plt.subplot(422, projection='polar')
+        ax2 = fig.add_subplot(gs[0, 1], projection='polar')
         bin_centers = (body_bin_edges[:-1] + body_bin_edges[1:]) / 2
         bin_centers_rad = np.deg2rad(bin_centers)
         ax2.bar(bin_centers_rad, body_plot_data[i], width=np.deg2rad(bin_width), edgecolor='k')
         ax2.set_title('Body Direction')
         ax2.set_theta_zero_location('N')
         ax2.set_theta_direction(-1)
+        ax2.set_frame_on(False)
 
-        # EBC head plot
-        ax3 = plt.subplot(423, projection='polar')
+        # EBC head ratemap (directly under head direction)
+        ax3 = fig.add_subplot(gs[1, 0], projection='polar')
         rbins = head_distance_bins.copy()
         abins = np.linspace(0, 2 * np.pi, (360 // ebc_angle_bin_size))
         A, R = np.meshgrid(abins, rbins)
@@ -257,15 +260,13 @@ with PdfPages(filename) as pdf:
         ax3.set_theta_direction(1)
         ax3.set_theta_offset(np.pi)
         # ax3.set_rticks([0, 200, 400, 600, 800, 1000], labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200 / pixels_per_cm)))
-        ax3.set_title(f"MRL: {MRLs_h[i]:.3f} | MRA: {MALs_h[i]:.3f} | "
-                      f"MRL_1: {MRLS_1_h[i]:.3f} | MRL_2: {MRLS_2_h[i]:.3f} | "
-                      f"MRA_1: {MALS_1_h[i]:.3f} | MRA_2: {MALS_2_h[i]:.3f} | "
-                      f"MRL_thresh: {Mrlthresh_h[i]:.3f}", fontsize=8)
+        ax3.set_title(f"MRL: {MRLs_h[i]:.3f} | MRA: {MALs_h[i]:.3f} | pref_dist: {pref_dist_head[i]:.3f}", fontsize=8)
         ax3.axis('off')
+        ax3.set_frame_on(False)
         fig.colorbar(pc)
 
-        # EBC body plot
-        ax4 = plt.subplot(424, projection='polar')
+        # EBC body ratemap (directly under body direction)
+        ax4 = fig.add_subplot(gs[1, 1], projection='polar')
         rbins = body_distance_bins.copy()
         abins = np.linspace(0, 2 * np.pi, (360 // ebc_angle_bin_size))
         A, R = np.meshgrid(abins, rbins)
@@ -273,33 +274,39 @@ with PdfPages(filename) as pdf:
         ax4.set_theta_direction(1)
         ax4.set_theta_offset(np.pi / 2.0)
         # ax4.set_rticks([0, 200, 400, 600, 800, 1000], labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200 / pixels_per_cm)))
-        ax4.set_title(f"MRL: {MRLs_b[i]:.3f} | MRA: {MALs_b[i]:.3f} | "
-                      f"MRL_1: {MRLS_1_b[i]:.3f} | MRL_2: {MRLS_2_b[i]:.3f} | "
-                      f"MRA_1: {MALS_1_b[i]:.3f} | MRA_2: {MALS_2_b[i]:.3f} | "
-                      f"MRL_thresh: {Mrlthresh_b[i]:.3f}", fontsize=8)
+        ax4.set_title(f"MRL: {MRLs_b[i]:.3f} | MRA: {MALs_b[i]:.3f} | pref_dist: {pref_dist_body[i]:.3f}", fontsize=8)
         ax4.axis('off')
+        ax4.set_frame_on(False)
         fig.colorbar(pc)
 
-        # Place cell plot
-        ax5 = plt.subplot(425)
-        pc = ax5.imshow(place_cell_plots[i], origin='lower', aspect='auto', extent=[x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]])
+        # Place cell plot (Gaussian-smoothed 2D histogram)
+        filt_size = 3
+        place_smoothed = cv2.GaussianBlur(
+            np.nan_to_num(place_cell_plots[i], nan=0.0).astype(np.float32),
+            (filt_size, filt_size), filt_size
+        )
+        ax5 = fig.add_subplot(gs[2, 0])
+        pc = ax5.imshow(place_smoothed, origin='lower', aspect='auto', extent=[x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]])
         fig.colorbar(pc)
         ax5.set_ylabel('Y position')
         ax5.set_title('2D Histogram of Spikes')
         ax5.axis("square")
+        ax5.spines[['top', 'right']].set_visible(False)
 
-        # Firing rate vs velocity plot
-        ax6 = plt.subplot(426)
-        ax6.plot(np.arange(0, max(velocity_list[i]), 5), spike_avg_list[i], 'k')
-        ax6.fill_between(np.arange(0, max(velocity_list[i]), 5), std_error_lower[i], std_error_upper[i], color='#ADD8E6')
+        # Firing rate vs velocity plot (y-axis fits this cell's data)
+        ax6 = fig.add_subplot(gs[2, 1])
+        x_vel = np.arange(0, max(velocity_list[i]), 5)
+        ax6.plot(x_vel, spike_avg_list[i], 'k')
+        ax6.fill_between(x_vel, std_error_lower[i], std_error_upper[i], color='#ADD8E6')
         ax6.set_title('Firing Rate vs Velocity')
         ax6.set_xlabel("Velocity")
         ax6.set_ylabel("Firing Rate")
-        ax6.set_ylim(bottom=0)
-        ax6.axis("square")
+        y_max = max(np.nanmax(std_error_upper[i]) if len(std_error_upper[i]) else 0, np.nanmax(spike_avg_list[i]) if len(spike_avg_list[i]) else 0, 0.0)
+        ax6.set_ylim(0, y_max * 1.05 if y_max > 0 else 1.0)
+        ax6.spines[['top', 'right']].set_visible(False)
 
         # Mouse position with head direction color coding
-        ax7 = plt.subplot(427)
+        ax7 = fig.add_subplot(gs[3, 0])
         ax7.plot(ch_points_x, ch_points_y, ".", markersize=0.5, color='lightgrey', alpha=0.3, rasterized=True)
         scatter = ax7.scatter(mouse_xs[i], mouse_ys[i], c=cell_hds[i], cmap='hsv', vmin=0, vmax=360, s=5, alpha=1.0, zorder=10, rasterized=True)
         cbar = plt.colorbar(scatter)
@@ -308,9 +315,10 @@ with PdfPages(filename) as pdf:
         ax7.set_ylabel('Mouse Y Position')
         ax7.set_title('Mouse Position with Color-Coded Head Direction')
         ax7.axis("square")
+        ax7.spines[['top', 'right']].set_visible(False)
 
         # Mouse position with body direction color coding
-        ax8 = plt.subplot(428)
+        ax8 = fig.add_subplot(gs[3, 1])
         ax8.plot(ch_points_x, ch_points_y, ".", markersize=0.5, color='lightgrey', alpha=0.3, rasterized=True)
         scatter2 = ax8.scatter(mouse_xsb[i], mouse_ysb[i], c=cell_bds[i], cmap='hsv', vmin=0, vmax=360, s=5, alpha=1.0, zorder=10, rasterized=True)
         cbar = plt.colorbar(scatter2)
@@ -319,6 +327,7 @@ with PdfPages(filename) as pdf:
         ax8.set_ylabel('Mouse Y Position')
         ax8.set_title('Mouse Position with Color-Coded Body Direction')
         ax8.axis("square")
+        ax8.spines[['top', 'right']].set_visible(False)
 
         fig.tight_layout()
         pdf.savefig(fig)
