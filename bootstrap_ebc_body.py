@@ -123,7 +123,7 @@ def bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_d
     n_bootstrap = 100  # number of bootstrap iterations
     mrl_thresholds = []
     preferred_dist = []
-
+    shuffled_mrls_all = []
 
     print('bootstrapping ego body...')
     for i in tqdm(cell_numbers):
@@ -254,8 +254,8 @@ def bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_d
             shuffled_mrls.append(MRL)
         mrl_threshold = np.percentile(shuffled_mrls, 99)
         mrl_thresholds.append(mrl_threshold)
+        shuffled_mrls_all.append(np.array(shuffled_mrls))
             
     # np.save(bootstrap_file,np.array(mrl_thresholds))
 
-
-    return MRLS,mrl_thresholds,MALS,ebc_plot_data, distance_bins, ebc_plot_data_binary, max_bins, preferred_dist
+    return MRLS,mrl_thresholds,MALS,ebc_plot_data, distance_bins, ebc_plot_data_binary, max_bins, preferred_dist, shuffled_mrls_all

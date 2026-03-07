@@ -124,6 +124,7 @@ def bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_d
     n_bootstrap = 100  # number of bootstrap iterations
     mrl_thresholds = []
     preferred_dist = []
+    shuffled_mrls_all = []
 
     print('bootstrapping ego head...')
     for i in tqdm(cell_numbers):
@@ -247,5 +248,6 @@ def bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_d
             shuffled_mrls.append(MRL)
         mrl_threshold = np.percentile(shuffled_mrls, 99)
         mrl_thresholds.append(mrl_threshold)
+        shuffled_mrls_all.append(np.array(shuffled_mrls))
 
-    return MRLS,mrl_thresholds,MALS,ebc_plot_data, distance_bins,ebc_plot_data_binary, max_bins,preferred_dist
+    return MRLS,mrl_thresholds,MALS,ebc_plot_data, distance_bins,ebc_plot_data_binary, max_bins,preferred_dist,shuffled_mrls_all

@@ -34,6 +34,7 @@ from bootstrap_ebc_body import *
 from half_check import *
 from half_check_body import *
 from cell_classification import *
+from significance_plots import create_significance_plots
 
 # TEST MODE: set to True to process only the first N cells and save outputs
 # into a "test" subdirectory (for faster trial runs).
@@ -140,14 +141,14 @@ mouse_xsb, mouse_ysb, cell_bds, ch_points_x, ch_points_y = trajectory_body(dlc_d
 
 # Bootstrap analyses for egocentric head and body
 print('analyzing egocentric head...')
-MRLs_h, Mrlthresh_h, MALs_h, head_ebc_plot_data, head_distance_bins, ebc_plot_data_binary_head, max_bins_head, pref_dist_head = bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, save_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
+MRLs_h, Mrlthresh_h, MALs_h, head_ebc_plot_data, head_distance_bins, ebc_plot_data_binary_head, max_bins_head, pref_dist_head, shuffled_mrls_head = bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, save_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
 print()
 print('\nHead MRLs:')
 for i, mrl in enumerate(MRLs_h):
     print(f'  Cell {i}: MRL = {mrl:.4f}')
 
 print('analyzing egocentric movement direction...')
-MRLs_b, Mrlthresh_b, MALs_b, body_ebc_plot_data, body_distance_bins, ebc_plot_data_binary, max_bins, pref_dist_body = bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, save_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
+MRLs_b, Mrlthresh_b, MALs_b, body_ebc_plot_data, body_distance_bins, ebc_plot_data_binary, max_bins, pref_dist_body, shuffled_mrls_body = bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, save_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
 
 
 print('\nBody MRLs:')
@@ -160,11 +161,11 @@ for i, mrl in enumerate(MRLs_b):
 # Half-check for consistency in analysis
 print('first vs. second half egocentric head...')
 half_check_file = output_base + '_half_ebc_head_data'
-MRLS_1_h, MRLS_2_h, MALS_1_h, MALS_2_h, pref_dist_1_h, pref_dist_2_h = egocentric_head_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, save_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
+MRLS_1_h, MRLS_2_h, MALS_1_h, MALS_2_h, pref_dist_1_h, pref_dist_2_h, half_ebc_head_1, half_ebc_head_2 = egocentric_head_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, save_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
 
 print('first vs. second half egocentric movement direction...')
 half_check_file = output_base + '_half_ebc_body_data'
-MRLS_1_b, MRLS_2_b, MALS_1_b, MALS_2_b, pref_dist_1_b, pref_dist_2_b = egocentric_body_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, save_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
+MRLS_1_b, MRLS_2_b, MALS_1_b, MALS_2_b, pref_dist_1_b, pref_dist_2_b, half_ebc_body_1, half_ebc_body_2 = egocentric_body_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, save_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
 
 #print(len(MRLS_1), len(MRLS_2), len(MALS_1), len(MALS_2))
 
@@ -334,6 +335,26 @@ with PdfPages(filename) as pdf:
         plt.close(fig)
 
 print('done creating PDF.')
+
+# Significance plots (bootstrap, first/second half, full-session summary)
+create_significance_plots(
+    phy_df, ref_frames, cell_types,
+    MRLs_h, Mrlthresh_h, MALs_h,
+    MRLs_b, Mrlthresh_b, MALs_b,
+    head_ebc_plot_data, head_distance_bins,
+    body_ebc_plot_data, body_distance_bins,
+    ebc_plot_data_binary_head, ebc_plot_data_binary,
+    max_bins_head, max_bins,
+    pref_dist_head, pref_dist_body,
+    MRLS_1, MRLS_2, MALS_1, MALS_2, pref_dist_1, pref_dist_2,
+    half_ebc_head_1, half_ebc_head_2,
+    half_ebc_body_1, half_ebc_body_2,
+    shuffled_mrls_head, shuffled_mrls_body,
+    full_session_MRL, Mrlthresh,
+    ebc_angle_bin_size, ebc_dist_bin_size,
+    output_base,
+)
+print('done creating significance plots.')
 
 print('saving variables to joblib file...')
 names = ['cell_types','ref_frames','head_plot_data','head_bin_edges','body_plot_data','body_bin_edges','place_cell_plots','x_edges','y_edges','velocity_list','spike_list','spike_avg_list',

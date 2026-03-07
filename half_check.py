@@ -141,7 +141,7 @@ def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins, ebc_angle_bin
         # max_firing_distance_bin = np.argmax(weibull_min.pdf(np.arange(m), *params))  #not fitting correctly, turned off PRLP 7/28/25
 
         preferred_dist.append(max_firing_distance_bin)
-    return MRLS, MALS,preferred_dist
+    return MRLS, MALS, preferred_dist, ebc_plot_data
 
 
 def egocentric_head_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins):
@@ -185,7 +185,7 @@ def egocentric_head_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_
     abins = np.linspace(0, 2*np.pi, (360 // ebc_angle_bin_size))
 
     half_check_file = file[:-3]+'_half_ebc_head_data'
-    MRLS_1, MALS_1,pref_dist_1 = calc_mrls(model_data_df_1, phy_df, cell_numbers, model_t1, abins, ebc_angle_bin_size, dist_bins,fps)
-    MRLS_2, MALS_2,pref_dist_2 = calc_mrls(model_data_df_2, phy_df, cell_numbers, model_t2, abins, ebc_angle_bin_size, dist_bins,fps)
+    MRLS_1, MALS_1, pref_dist_1, ebc_plot_data_1 = calc_mrls(model_data_df_1, phy_df, cell_numbers, model_t1, abins, ebc_angle_bin_size, dist_bins, fps)
+    MRLS_2, MALS_2, pref_dist_2, ebc_plot_data_2 = calc_mrls(model_data_df_2, phy_df, cell_numbers, model_t2, abins, ebc_angle_bin_size, dist_bins, fps)
 
-    return MRLS_1, MRLS_2, MALS_1, MALS_2,pref_dist_1,pref_dist_2
+    return MRLS_1, MRLS_2, MALS_1, MALS_2, pref_dist_1, pref_dist_2, ebc_plot_data_1, ebc_plot_data_2
