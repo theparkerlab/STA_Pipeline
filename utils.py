@@ -46,7 +46,7 @@ def plot_ebc(data,i,distance_bins,angle_bin_size, pixels_per_cm):
     fig, ax = plt.subplots(subplot_kw=dict(projection="polar"))
     fig.suptitle("cell_number: "+(str(i)))
 
-    pc = ax.pcolormesh(A, R, data, cmap="jet", vmin=0)
+    pc = ax.pcolormesh(A, R, data, cmap="jet", vmin=0, edgecolors="none")
     ax.set_theta_direction(1)
     ax.set_theta_offset(np.pi / 2)
     # ax.set_rticks([0, 200, 400, 600, 800, 1000],labels=np.floor(np.arange(0, 1000 / pixels_per_cm + 1, 200/pixels_per_cm)))  # Less radial ticks
@@ -65,7 +65,7 @@ def plot_ebc_head(data,i,distance_bins,angle_bin_size, pixels_per_cm):
     fig, ax = plt.subplots(subplot_kw=dict(projection="polar"))
     fig.suptitle("cell_number: "+(str(i)))
 
-    pc = ax.pcolormesh(A, R, data, cmap="jet")
+    pc = ax.pcolormesh(A, R, data, cmap="jet", edgecolors="none")
     ax.set_theta_direction(1)
     ax.set_theta_offset(np.pi)
     # ax.set_thetagrids([0, 45, 90, 135, 180, 225, 270, 315], labels=['90°', '135°', '180°', '225°', '270°', '315°', '0°', '45°'])

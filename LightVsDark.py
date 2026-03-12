@@ -155,7 +155,7 @@ with PdfPages(root_folder + "\LightVsDark.pdf") as pdf:
         A, R = np.meshgrid(abins, rbins)
 
 
-        pc = ax3.pcolormesh(A, R, head_ebc_plot_data_light[i], cmap="jet", vmin=0, vmax=headMax)
+        pc = ax3.pcolormesh(A, R, head_ebc_plot_data_light[i], cmap="jet", vmin=0, vmax=headMax, edgecolors="none")
         ax3.set_theta_direction(1)
         ax3.set_theta_offset(np.pi)
         # ax3.set_thetagrids([0, 45, 90, 135, 180, 225, 270, 315], labels=['90°', '135°', '180°', '225°', '270°', '315°', '0°', '45°'])
@@ -177,7 +177,7 @@ with PdfPages(root_folder + "\LightVsDark.pdf") as pdf:
         A, R = np.meshgrid(abins, rbins)
 
 
-        pc = ax4.pcolormesh(A, R, body_ebc_plot_data_light[i], cmap="jet", vmin=0, vmax=bodyMax)
+        pc = ax4.pcolormesh(A, R, body_ebc_plot_data_light[i], cmap="jet", vmin=0, vmax=bodyMax, edgecolors="none")
         ax4.set_theta_direction(1)
         ax4.set_theta_offset(np.pi / 2.0)
         ax4.axis('off')
@@ -241,7 +241,7 @@ with PdfPages(root_folder + "\LightVsDark.pdf") as pdf:
         A, R = np.meshgrid(abins, rbins)
 
 
-        pc = ax3.pcolormesh(A, R, head_ebc_plot_data_dark[i], cmap="jet", vmin=0, vmax=headMax)
+        pc = ax3.pcolormesh(A, R, head_ebc_plot_data_dark[i], cmap="jet", vmin=0, vmax=headMax, edgecolors="none")
         ax3.set_theta_direction(1)
         ax3.set_theta_offset(np.pi)
         ax3.set_thetagrids([0, 45, 90, 135, 180, 225, 270, 315], labels=['90°', '135°', '180°', '225°', '270°', '315°', '0°', '45°'])
@@ -257,7 +257,7 @@ with PdfPages(root_folder + "\LightVsDark.pdf") as pdf:
         A, R = np.meshgrid(abins, rbins)
 
 
-        pc = ax4.pcolormesh(A, R, body_ebc_plot_data_dark[i], cmap="jet", vmin = 0, vmax=bodyMax)
+        pc = ax4.pcolormesh(A, R, body_ebc_plot_data_dark[i], cmap="jet", vmin=0, vmax=bodyMax, edgecolors="none")
         ax4.set_theta_direction(1)
         ax4.set_theta_offset(np.pi / 2.0)
         # ax4.set_rticks([0, 200, 400, 600, 800, 1000],labels=np.floor(np.arange(0, 1000 / pixels_per_cm_dark + 1, 200/pixels_per_cm_dark)))  # Less radial ticks

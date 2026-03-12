@@ -5,9 +5,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.gridspec import GridSpec
+from matplotlib.colors import LinearSegmentedColormap
 import matplotlib
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
+
+# Light blue colormap for threshold ratemaps (white -> light blue)
+CMAP_LIGHT_BLUE = LinearSegmentedColormap.from_list("light_blue", ["white", "#87CEEB"], N=256)
 from scipy.optimize import curve_fit
 from tqdm import tqdm
 
@@ -119,7 +123,8 @@ def create_significance_plots(
 
             # Half 1 ratemap (style matched to summary_plots.pdf)
             ax2 = fig.add_subplot(gs[1, 0], projection="polar")
-            pc = ax2.pcolormesh(A, R, half_1, cmap="jet")
+            ax2.grid(False)
+            pc = ax2.pcolormesh(A, R, half_1, cmap="jet", edgecolors="none", rasterized=True)
             ax2.set_theta_direction(1)
             ax2.set_theta_offset(theta_offset)
             ax2.set_title(f"1st half | MRL: {MRLS_1[i]:.3f} | MRA: {MALS_1[i]:.3f} | pref_dist: {pref_dist_1[i]:.1f}", fontsize=9)
@@ -129,7 +134,8 @@ def create_significance_plots(
 
             # Half 2 ratemap (style matched to summary_plots.pdf)
             ax3 = fig.add_subplot(gs[1, 1], projection="polar")
-            pc = ax3.pcolormesh(A, R, half_2, cmap="jet")
+            ax3.grid(False)
+            pc = ax3.pcolormesh(A, R, half_2, cmap="jet", edgecolors="none", rasterized=True)
             ax3.set_theta_direction(1)
             ax3.set_theta_offset(theta_offset)
             ax3.set_title(f"2nd half | MRL: {MRLS_2[i]:.3f} | MRA: {MALS_2[i]:.3f} | pref_dist: {pref_dist_2[i]:.1f}", fontsize=9)
@@ -137,12 +143,12 @@ def create_significance_plots(
             ax3.set_frame_on(False)
             fig.colorbar(pc, ax=ax3)
 
-            # Half 1 threshold (light colormap so black line pops)
+            # Half 1 threshold (light blue so black line pops)
             bin1 = make_threshold(half_1)
             ang1, rad1 = get_max_bins(half_1)
             ax4 = fig.add_subplot(gs[2, 0], projection="polar")
             ax4.grid(False)
-            ax4.pcolormesh(A, R, bin1, cmap="Blues", vmin=0, vmax=1)
+            ax4.pcolormesh(A, R, bin1, cmap=CMAP_LIGHT_BLUE, vmin=0, vmax=1, edgecolors="none", rasterized=True)
             ax4.plot([0, ang1], [0, rad1], "k-", linewidth=2)
             ax4.set_theta_direction(1)
             ax4.set_theta_offset(theta_offset)
@@ -150,12 +156,12 @@ def create_significance_plots(
             ax4.axis("off")
             ax4.set_frame_on(False)
 
-            # Half 2 threshold (light colormap so black line pops)
+            # Half 2 threshold (light blue so black line pops)
             bin2 = make_threshold(half_2)
             ang2, rad2 = get_max_bins(half_2)
             ax5 = fig.add_subplot(gs[2, 1], projection="polar")
             ax5.grid(False)
-            ax5.pcolormesh(A, R, bin2, cmap="Blues", vmin=0, vmax=1)
+            ax5.pcolormesh(A, R, bin2, cmap=CMAP_LIGHT_BLUE, vmin=0, vmax=1, edgecolors="none", rasterized=True)
             ax5.plot([0, ang2], [0, rad2], "k-", linewidth=2)
             ax5.set_theta_direction(1)
             ax5.set_theta_offset(theta_offset)
@@ -165,7 +171,8 @@ def create_significance_plots(
 
             # --- Section 3: Summary (full session) ---
             ax6 = fig.add_subplot(gs[3, 0], projection="polar")
-            pc = ax6.pcolormesh(A, R, ebc_data, cmap="jet")
+            ax6.grid(False)
+            pc = ax6.pcolormesh(A, R, ebc_data, cmap="jet", edgecolors="none", rasterized=True)
             ax6.set_theta_direction(1)
             ax6.set_theta_offset(theta_offset)
             ax6.set_title(f"Full session | MRL: {MRL:.3f} | MRA: {MAL:.3f} | pref_dist: {pref_dist:.1f}", fontsize=9)
@@ -175,7 +182,7 @@ def create_significance_plots(
 
             ax7 = fig.add_subplot(gs[3, 1], projection="polar")
             ax7.grid(False)
-            ax7.pcolormesh(A, R, ebc_binary, cmap="Blues", vmin=0, vmax=1)
+            ax7.pcolormesh(A, R, ebc_binary, cmap=CMAP_LIGHT_BLUE, vmin=0, vmax=1, edgecolors="none", rasterized=True)
             ax7.plot([0, max_bins_i[0]], [0, max_bins_i[1]], "k-", linewidth=2)
             ax7.set_theta_direction(1)
             ax7.set_theta_offset(theta_offset)
@@ -208,23 +215,6 @@ def create_significance_plots(
             ax8.spines[["top", "right"]].set_visible(False)
 
             fig.tight_layout(rect=[0, 0, 1, 0.955])
-
-            # Horizontal divider lines with padding below each section (full width)
-            # Extra padding under bootstrap so x-axis labels clear the line
-            for ax in [ax1, ax3, ax5, ax7, ax8]:
-                pos = ax.get_position()
-                line_pad = 0.035 if ax is ax1 else 0.012
-                y_line = max(0, pos.ymin - line_pad)
-                fig.add_artist(
-                    plt.Line2D(
-                        [0, 1],
-                        [y_line, y_line],
-                        transform=fig.transFigure,
-                        color="gray",
-                        linewidth=0.8,
-                        linestyle="-",
-                    )
-                )
 
             pdf.savefig(fig)
             plt.close(fig)
