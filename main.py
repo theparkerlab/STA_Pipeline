@@ -141,14 +141,14 @@ mouse_xsb, mouse_ysb, cell_bds, ch_points_x, ch_points_y = trajectory_body(dlc_d
 
 # Bootstrap analyses for egocentric head and body
 print('analyzing egocentric head...')
-MRLs_h, Mrlthresh_h, MALs_h, head_ebc_plot_data, head_distance_bins, ebc_plot_data_binary_head, max_bins_head, pref_dist_head, shuffled_mrls_head = bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, save_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
+MRLs_h, Mrlthresh_h, MALs_h, head_ebc_plot_data, head_distance_bins, ebc_plot_data_binary_head, max_bins_head, pref_dist_head, shuffled_mrls_head, Mrlthresh_half1_h, Mrlthresh_half2_h = bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, save_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
 print()
 print('\nHead MRLs:')
 for i, mrl in enumerate(MRLs_h):
     print(f'  Cell {i}: MRL = {mrl:.4f}')
 
 print('analyzing egocentric movement direction...')
-MRLs_b, Mrlthresh_b, MALs_b, body_ebc_plot_data, body_distance_bins, ebc_plot_data_binary, max_bins, pref_dist_body, shuffled_mrls_body = bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, save_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
+MRLs_b, Mrlthresh_b, MALs_b, body_ebc_plot_data, body_distance_bins, ebc_plot_data_binary, max_bins, pref_dist_body, shuffled_mrls_body, Mrlthresh_half1_b, Mrlthresh_half2_b = bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, save_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
 
 
 print('\nBody MRLs:')
@@ -173,7 +173,7 @@ MRLS_1_b, MRLS_2_b, MALS_1_b, MALS_2_b, pref_dist_1_b, pref_dist_2_b, half_ebc_b
 print('classifying cell types...')
 # cell_type = classify_cell(dlc_df, phy_df, MRLs_h, Mrlthresh_h, MALs_h, pref_dist_head, MRLS_1_h, MRLS_2_h, MALS_1_h, MALS_2_h, MRLs_b, Mrlthresh_b, MALs_b, pref_dist_body, MRLS_1_b, MRLS_2_b, MALS_1_b, MALS_2_b, pref_dist_1_b, pref_dist_2_b, pref_dist_1_h, pref_dist_2_h)
 
-ref_frames, cell_types, MRLS_1, MRLS_2, MALS_1, MALS_2, pref_dist_1, pref_dist_2, Mrlthresh, full_session_MRL = ([] for i in range(10))
+ref_frames, cell_types, MRLS_1, MRLS_2, MALS_1, MALS_2, pref_dist_1, pref_dist_2, Mrlthresh, Mrlthresh_half1, Mrlthresh_half2, full_session_MRL = ([] for i in range(12))
 
 for i in range(len(phy_df)):
     head_MRL = MRLs_h[i]
@@ -186,6 +186,8 @@ for i in range(len(phy_df)):
         pref_dist_1.append(pref_dist_1_h[i])
         pref_dist_2.append(pref_dist_2_h[i])
         Mrlthresh.append(Mrlthresh_h[i])
+        Mrlthresh_half1.append(Mrlthresh_half1_h[i])
+        Mrlthresh_half2.append(Mrlthresh_half2_h[i])
         full_session_MRL.append(MRLs_h[i])
         ref_frames.append('head')
     else:
@@ -196,10 +198,23 @@ for i in range(len(phy_df)):
         pref_dist_1.append(pref_dist_1_b[i])
         pref_dist_2.append(pref_dist_2_b[i])
         Mrlthresh.append(Mrlthresh_b[i])
+        Mrlthresh_half1.append(Mrlthresh_half1_b[i])
+        Mrlthresh_half2.append(Mrlthresh_half2_b[i])
         full_session_MRL.append(MRLs_b[i])
         ref_frames.append('body')
 
-cell_types = classify_cell(dlc_df, phy_df, MRLS_1, MRLS_2, MALS_1, MALS_2, pref_dist_1, pref_dist_2, Mrlthresh)
+cell_types = classify_cell(
+    dlc_df,
+    phy_df,
+    MRLS_1,
+    MRLS_2,
+    MALS_1,
+    MALS_2,
+    pref_dist_1,
+    pref_dist_2,
+    Mrlthresh_half1,
+    Mrlthresh_half2,
+)
 
 # Round analysis results for readability
 MRLs_h = [round(num, 3) for num in MRLs_h]

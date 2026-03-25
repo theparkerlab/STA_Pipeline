@@ -33,7 +33,7 @@ def _fit_weibull(x, y):
         # Initial baseline ~ value at first bin; peak amplitude; shape/scale
         p0 = (float(y.flat[0]) if y.size else 0, max_y - min_y, 2.0, np.median(x[x > 0]) if np.any(x > 0) else 50.0)
         bounds = ([0, 0, 0.5, 1e-6], [max_y * 2, max_y * 500, 10, np.max(x) * 2])
-        popt, _ = curve_fit(_weibull_with_baseline, x, y, p0=p0, bounds=bounds, maxfev=3000)
+        popt, _ = curve_fit(_weibull_with_baseline, x, y, p0=p0, bounds=bounds, maxfev=3000) # this is implemented differently in the rest of the code, might want to unify PRLP 03/20/2026
         y_fit = _weibull_with_baseline(x, *popt)
         return True, y_fit
     except Exception:

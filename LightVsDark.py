@@ -52,7 +52,8 @@ path = askdirectory(title='Choose experiment folder', initialdir=r'\\rhea\E\ephy
 print('you have selected: ', path)
 
 #there is a light path and a dark path, the folder names sometimes vary so we want to find a folder with "light" in the name and one with "dark" in the name that is case insensitive
-lightPath = findDir("*light*", path.lower())
+# lightPath = findDir("*light*", path.lower())
+lightPath = os.path.join(path,'FM_LIGHT')
 print(lightPath)
 dlc_phy_file_light = find('*topDLCephys.h5',lightPath)
 
@@ -60,7 +61,8 @@ dlc_df_light = pd.read_hdf(dlc_phy_file_light, 'dlc_df')
 phy_df_light = pd.read_hdf(dlc_phy_file_light,'phy_df')
 
 
-darkPath = findDir("*dark*", path.lower())
+# darkPath = findDir("*dark*", path.lower())
+darkPath = os.path.join(path,'FM_DARK')
 print(darkPath)
 dlc_phy_file_light = find('*topDLCephys.h5',lightPath)
 
@@ -284,3 +286,7 @@ with PdfPages(root_folder + "\LightVsDark.pdf") as pdf:
         fig.tight_layout()
 
         pdf.savefig(fig)
+
+        plt.close(fig)
+
+print("Done with Light vs Dark Analysis")

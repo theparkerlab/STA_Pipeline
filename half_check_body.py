@@ -104,10 +104,11 @@ def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins, ebc_angle_bin
         #"half the arena size" filter
         cell_spikes_avg = cell_spikes_avg[:dist_bins,:]
         
-        #adding 1 to the occupancy data to avoid dividing by zero (PRLP 7/14/25)
-        cell_spikes_avg = np.divide(cell_spikes_avg, (ebc_data_avg+1))
+        # Normalize by occupancy (match bootstrap). Use NaN-protection to avoid divide-by-zero.
+        cell_spikes_avg = np.divide(cell_spikes_avg, ebc_data_avg)
         
         cell_spikes_avg[np.isnan(cell_spikes_avg)] = 0
+        cell_spikes_avg[np.isinf(cell_spikes_avg)] = 0
 
         cell_spikes_avg = np.multiply(cell_spikes_avg, fps)
 
@@ -116,8 +117,10 @@ def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins, ebc_angle_bin
         ebc_plot_data.append(cell_spikes_avg)
 
         firing_rates = cell_spikes_avg.copy().T
+        mean_firing_rate = np.mean(firing_rates)
         theta = abins.copy()
         MR = (1 / (n * m)) * np.sum(firing_rates * np.exp(1j * theta[:, None]), axis=(0, 1))
+        MR = MR / mean_firing_rate if mean_firing_rate != 0 else 0
         MRL = np.abs(MR)
         MRA = np.angle(MR)
 
@@ -126,13 +129,13 @@ def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins, ebc_angle_bin
 
         preferred_orientation_idx = np.argmin(np.abs(theta - MRA))
         firing_rate_vector = firing_rates[preferred_orientation_idx, :]
-        max_firing_distance_bin = np.argmax(firing_rate_vector)
+        # max_firing_distance_bin = np.argmax(firing_rate_vector)
 
         # Fit a Weibull distribution
-        # params = weibull_min.fit(firing_rate_vector)
+        params = weibull_min.fit(firing_rate_vector)
 
         # Get the distance bin with the maximum estimated firing rate
-        # max_firing_distance_bin = np.argmax(weibull_min.pdf(np.arange(m), *params))  #not fitting correctly, turned off PRLP 7/28/25
+        max_firing_distance_bin = np.argmax(weibull_min.pdf(np.arange(m), *params))  #not fitting correctly, turned off PRLP 7/28/25
 
         preferred_dist.append(max_firing_distance_bin)
     return MRLS, MALS, preferred_dist, ebc_plot_data

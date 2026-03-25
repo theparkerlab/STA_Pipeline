@@ -102,6 +102,12 @@ def bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_d
 
     ebc_data_avg = np.sum(ebc_data,axis=0)
     ebc_data_avg = ebc_data_avg[:dist_bins, :]
+
+    # Half-specific occupancy used for half-MRL null thresholds.
+    # We split after speed filtering, matching how the half-check builds rate maps.
+    half_split_idx = len(model_data_df) // 2
+    ebc_data_avg_half1 = np.sum(ebc_data[:half_split_idx], axis=0)[:dist_bins, :]
+    ebc_data_avg_half2 = np.sum(ebc_data[half_split_idx:], axis=0)[:dist_bins, :]
     
     model_data_df['egocentric'] = list(ebc_data)
 
@@ -123,6 +129,8 @@ def bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_d
     m = dist_bins   # number of distance bins
     n_bootstrap = 100  # number of bootstrap iterations
     mrl_thresholds = []
+    mrl_thresholds_half1 = []
+    mrl_thresholds_half2 = []
     preferred_dist = []
     shuffled_mrls_all = []
 
@@ -135,6 +143,8 @@ def bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_d
         spike_times = spike_times[spike_times<=max(model_t)]
 
         shuffled_mrls = []
+        shuffled_mrls_half1 = []
+        shuffled_mrls_half2 = []
 
         #binning spikes
         sp_count_ind = np.digitize(spike_times,bins = model_t)
@@ -143,7 +153,6 @@ def bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_d
         sp_count_ind = [i-1 for i in sp_count_ind]
 
         sp_count_ind = [i for i in sp_count_ind if i in model_data_df.index]
-        
         cell_spikes_egocentric = model_data_df['egocentric'].loc[sp_count_ind]  
         
         cell_spikes_avg = np.sum(cell_spikes_egocentric,axis = 0)
@@ -196,12 +205,13 @@ def bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_d
         # Here we're assuming you calculate this by taking the firing rates at the closest orientation to MRA
         preferred_orientation_idx = np.argmin(np.abs(theta - MRA))
         firing_rate_vector = firing_rates[preferred_orientation_idx, :]
-        max_firing_distance_bin = np.argmax(firing_rate_vector)
+        # max_firing_distance_bin = np.argmax(firing_rate_vector)
+
         # Fit a Weibull distribution
-        # params = weibull_min.fit(firing_rate_vector)
+        params = weibull_min.fit(firing_rate_vector)
 
         # Get the distance bin with the maximum estimated firing rate
-        # max_firing_distance_bin = np.argmax(weibull_min.pdf(np.arange(m), *params)) #not fitting correctly, turned off PRLP 7/28/25
+        max_firing_distance_bin = np.argmax(weibull_min.pdf(np.arange(m), *params)) #not fitting correctly, turned off PRLP 7/28/25
 
         preferred_dist.append(max_firing_distance_bin)
 
@@ -218,6 +228,9 @@ def bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_d
             sp_count_ind = [i-1 for i in sp_count_ind]
 
             sp_count_ind = [i for i in sp_count_ind if i in model_data_df.index]
+
+            sp_count_ind_half1 = [idx for idx in sp_count_ind if idx < half_split_idx]
+            sp_count_ind_half2 = [idx for idx in sp_count_ind if idx >= half_split_idx]
 
             cell_spikes_egocentric = model_data_df['egocentric'].loc[sp_count_ind]  
 
@@ -246,8 +259,69 @@ def bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_d
 
             # Append to the shuffled MRLs list
             shuffled_mrls.append(MRL)
+
+            # Half-specific shuffled MRLs (for half-based EBC labeling thresholds)
+            if len(sp_count_ind_half1) > 0:
+                cell_spikes_egocentric_half1 = model_data_df['egocentric'].loc[sp_count_ind_half1]
+                cell_spikes_avg_half1 = np.sum(cell_spikes_egocentric_half1, axis=0)
+                cell_spikes_avg_half1 = cell_spikes_avg_half1[:dist_bins, :]
+                cell_spikes_avg_half1 = np.divide(cell_spikes_avg_half1, ebc_data_avg_half1)
+                cell_spikes_avg_half1[np.isnan(cell_spikes_avg_half1)] = 0
+                cell_spikes_avg_half1[np.isinf(cell_spikes_avg_half1)] = 0
+                cell_spikes_avg_half1 = np.multiply(cell_spikes_avg_half1, fps)
+                cell_spikes_avg_half1 = cv2.GaussianBlur(
+                    cell_spikes_avg_half1, (filt_size, filt_size), filt_size
+                )
+            else:
+                cell_spikes_avg_half1 = np.zeros_like(ebc_data_avg_half1)
+
+            firing_rates_half1 = cell_spikes_avg_half1.copy().T
+            mean_firing_rate_half1 = np.mean(firing_rates_half1)
+            MR_half1 = (1 / (n * m)) * np.sum(
+                firing_rates_half1 * np.exp(1j * theta[:, None]), axis=(0, 1)
+            )
+            MR_half1 = MR_half1 / mean_firing_rate_half1 if mean_firing_rate_half1 != 0 else 0
+            shuffled_mrls_half1.append(np.abs(MR_half1))
+
+            if len(sp_count_ind_half2) > 0:
+                cell_spikes_egocentric_half2 = model_data_df['egocentric'].loc[sp_count_ind_half2]
+                cell_spikes_avg_half2 = np.sum(cell_spikes_egocentric_half2, axis=0)
+                cell_spikes_avg_half2 = cell_spikes_avg_half2[:dist_bins, :]
+                cell_spikes_avg_half2 = np.divide(cell_spikes_avg_half2, ebc_data_avg_half2)
+                cell_spikes_avg_half2[np.isnan(cell_spikes_avg_half2)] = 0
+                cell_spikes_avg_half2[np.isinf(cell_spikes_avg_half2)] = 0
+                cell_spikes_avg_half2 = np.multiply(cell_spikes_avg_half2, fps)
+                cell_spikes_avg_half2 = cv2.GaussianBlur(
+                    cell_spikes_avg_half2, (filt_size, filt_size), filt_size
+                )
+            else:
+                cell_spikes_avg_half2 = np.zeros_like(ebc_data_avg_half2)
+
+            firing_rates_half2 = cell_spikes_avg_half2.copy().T
+            mean_firing_rate_half2 = np.mean(firing_rates_half2)
+            MR_half2 = (1 / (n * m)) * np.sum(
+                firing_rates_half2 * np.exp(1j * theta[:, None]), axis=(0, 1)
+            )
+            MR_half2 = MR_half2 / mean_firing_rate_half2 if mean_firing_rate_half2 != 0 else 0
+            shuffled_mrls_half2.append(np.abs(MR_half2))
         mrl_threshold = np.percentile(shuffled_mrls, 99)
         mrl_thresholds.append(mrl_threshold)
+        mrl_threshold_half1 = np.percentile(shuffled_mrls_half1, 99)
+        mrl_threshold_half2 = np.percentile(shuffled_mrls_half2, 99)
+        mrl_thresholds_half1.append(mrl_threshold_half1)
+        mrl_thresholds_half2.append(mrl_threshold_half2)
         shuffled_mrls_all.append(np.array(shuffled_mrls))
 
-    return MRLS,mrl_thresholds,MALS,ebc_plot_data, distance_bins,ebc_plot_data_binary, max_bins,preferred_dist,shuffled_mrls_all
+    return (
+        MRLS,
+        mrl_thresholds,
+        MALS,
+        ebc_plot_data,
+        distance_bins,
+        ebc_plot_data_binary,
+        max_bins,
+        preferred_dist,
+        shuffled_mrls_all,
+        mrl_thresholds_half1,
+        mrl_thresholds_half2,
+    )
