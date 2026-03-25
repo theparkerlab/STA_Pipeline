@@ -19,6 +19,9 @@ from egocentric_head import *
 from Egocentric import *
 from scipy.stats import weibull_min
 
+from half_split import bootstrap_row_half_a_mask, index_in_half_a_map
+
+
 def calculate_mr(firing_rates, n, m):
     """
     Calculate the mean resultant vector (MR) for given firing rates.
@@ -58,7 +61,21 @@ def shuffle_spike_train(spike_times, recording_duration, min_shift=30):
     
     return shuffled_times
 
-def bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file,speed_threshold, ebc_angle_bin_size,ebc_dist_bin_size, dist_bins):
+def bootstrap_egocentric_body(
+    dlc_df,
+    phy_df,
+    fps,
+    likelihood_threshold,
+    model_dt,
+    bin_width,
+    file,
+    speed_threshold,
+    ebc_angle_bin_size,
+    ebc_dist_bin_size,
+    dist_bins,
+    half_split_mode="interleaved",
+    interleave_block_sec=10.0,
+):
     """
     Perform bootstrap analysis on egocentric body-centered EBC data and calculate various metrics.
     
@@ -102,12 +119,14 @@ def bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_d
     ebc_data_avg = np.sum(ebc_data,axis=0)
     ebc_data_avg = ebc_data_avg[:dist_bins, :]
 
-    # Half-specific occupancy used for half-MRL null thresholds.
-    # We split after speed filtering, matching how the half-check builds rate maps.
-    half_split_idx = len(model_data_df) // 2
-    ebc_data_avg_half1 = np.sum(ebc_data[:half_split_idx], axis=0)[:dist_bins, :]
-    ebc_data_avg_half2 = np.sum(ebc_data[half_split_idx:], axis=0)[:dist_bins, :]
-    
+    row_half_a = bootstrap_row_half_a_mask(
+        model_data_df, model_t, model_dt, half_split_mode, interleave_block_sec
+    )
+    ebc_stack = np.asarray(ebc_data, dtype=float)
+    ebc_data_avg_half1 = np.sum(ebc_stack[row_half_a], axis=0)[:dist_bins, :]
+    ebc_data_avg_half2 = np.sum(ebc_stack[~row_half_a], axis=0)[:dist_bins, :]
+    label_in_half_a = index_in_half_a_map(model_data_df, row_half_a)
+
     model_data_df['egocentric'] = list(ebc_data)
 
     distance_bins = distance_bins[:dist_bins] #cut off far half of the arena
@@ -236,8 +255,8 @@ def bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_d
 
             sp_count_ind = [i for i in sp_count_ind if i in model_data_df.index]
 
-            sp_count_ind_half1 = [idx for idx in sp_count_ind if idx < half_split_idx]
-            sp_count_ind_half2 = [idx for idx in sp_count_ind if idx >= half_split_idx]
+            sp_count_ind_half1 = [idx for idx in sp_count_ind if label_in_half_a.get(idx, False)]
+            sp_count_ind_half2 = [idx for idx in sp_count_ind if not label_in_half_a.get(idx, False)]
 
             cell_spikes_egocentric = model_data_df['egocentric'].loc[sp_count_ind]  
 

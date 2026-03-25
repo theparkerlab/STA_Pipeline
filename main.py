@@ -120,6 +120,12 @@ speed_threshold = 0.25
 ebc_angle_bin_size = 6
 ebc_dist_bin_size = 10
 dist_bins = 480 // ebc_dist_bin_size #480 is approximately half the arena length in pixels
+
+# Pseudo-half split for half-check maps and bootstrap half-null MRL thresholds.
+# "interleaved" mixes early/late session via alternating time blocks; "contiguous" is first/second half of frames.
+HALF_SPLIT_MODE = "interleaved"  # "interleaved" | "contiguous"
+INTERLEAVE_BLOCK_SEC = 10.0
+
 pixels_per_cm = (dlc_df[dlc_df['top_right likelihood'] > 0.95]['top_right x'].median() - dlc_df[dlc_df['top_left likelihood'] > 0.95]['top_left x'].median()) / 60
 print("P/CM: " + str(pixels_per_cm))
 
@@ -141,14 +147,42 @@ mouse_xsb, mouse_ysb, cell_bds, ch_points_x, ch_points_y = trajectory_body(dlc_d
 
 # Bootstrap analyses for egocentric head and body
 print('analyzing egocentric head...')
-MRLs_h, Mrlthresh_h, MALs_h, head_ebc_plot_data, head_distance_bins, ebc_plot_data_binary_head, max_bins_head, pref_dist_head, shuffled_mrls_head, Mrlthresh_half1_h, Mrlthresh_half2_h = bootstrap_egocentric_head(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, save_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
+MRLs_h, Mrlthresh_h, MALs_h, head_ebc_plot_data, head_distance_bins, ebc_plot_data_binary_head, max_bins_head, pref_dist_head, shuffled_mrls_head, Mrlthresh_half1_h, Mrlthresh_half2_h = bootstrap_egocentric_head(
+    dlc_df,
+    phy_df,
+    fps,
+    likelihood_threshold,
+    model_dt,
+    bin_width,
+    save_file,
+    speed_threshold,
+    ebc_angle_bin_size,
+    ebc_dist_bin_size,
+    dist_bins,
+    half_split_mode=HALF_SPLIT_MODE,
+    interleave_block_sec=INTERLEAVE_BLOCK_SEC,
+)
 print()
 print('\nHead MRLs:')
 for i, mrl in enumerate(MRLs_h):
     print(f'  Cell {i}: MRL = {mrl:.4f}')
 
 print('analyzing egocentric movement direction...')
-MRLs_b, Mrlthresh_b, MALs_b, body_ebc_plot_data, body_distance_bins, ebc_plot_data_binary, max_bins, pref_dist_body, shuffled_mrls_body, Mrlthresh_half1_b, Mrlthresh_half2_b = bootstrap_egocentric_body(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, save_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
+MRLs_b, Mrlthresh_b, MALs_b, body_ebc_plot_data, body_distance_bins, ebc_plot_data_binary, max_bins, pref_dist_body, shuffled_mrls_body, Mrlthresh_half1_b, Mrlthresh_half2_b = bootstrap_egocentric_body(
+    dlc_df,
+    phy_df,
+    fps,
+    likelihood_threshold,
+    model_dt,
+    bin_width,
+    save_file,
+    speed_threshold,
+    ebc_angle_bin_size,
+    ebc_dist_bin_size,
+    dist_bins,
+    half_split_mode=HALF_SPLIT_MODE,
+    interleave_block_sec=INTERLEAVE_BLOCK_SEC,
+)
 
 
 print('\nBody MRLs:')
@@ -161,11 +195,39 @@ for i, mrl in enumerate(MRLs_b):
 # Half-check for consistency in analysis
 print('first vs. second half egocentric head...')
 half_check_file = output_base + '_half_ebc_head_data'
-MRLS_1_h, MRLS_2_h, MALS_1_h, MALS_2_h, pref_dist_1_h, pref_dist_2_h, half_ebc_head_1, half_ebc_head_2 = egocentric_head_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, save_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
+MRLS_1_h, MRLS_2_h, MALS_1_h, MALS_2_h, pref_dist_1_h, pref_dist_2_h, half_ebc_head_1, half_ebc_head_2 = egocentric_head_half_check(
+    dlc_df,
+    phy_df,
+    fps,
+    likelihood_threshold,
+    model_dt,
+    bin_width,
+    save_file,
+    speed_threshold,
+    ebc_angle_bin_size,
+    ebc_dist_bin_size,
+    dist_bins,
+    half_split_mode=HALF_SPLIT_MODE,
+    interleave_block_sec=INTERLEAVE_BLOCK_SEC,
+)
 
 print('first vs. second half egocentric movement direction...')
 half_check_file = output_base + '_half_ebc_body_data'
-MRLS_1_b, MRLS_2_b, MALS_1_b, MALS_2_b, pref_dist_1_b, pref_dist_2_b, half_ebc_body_1, half_ebc_body_2 = egocentric_body_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, save_file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)
+MRLS_1_b, MRLS_2_b, MALS_1_b, MALS_2_b, pref_dist_1_b, pref_dist_2_b, half_ebc_body_1, half_ebc_body_2 = egocentric_body_half_check(
+    dlc_df,
+    phy_df,
+    fps,
+    likelihood_threshold,
+    model_dt,
+    bin_width,
+    save_file,
+    speed_threshold,
+    ebc_angle_bin_size,
+    ebc_dist_bin_size,
+    dist_bins,
+    half_split_mode=HALF_SPLIT_MODE,
+    interleave_block_sec=INTERLEAVE_BLOCK_SEC,
+)
 
 #print(len(MRLS_1), len(MRLS_2), len(MALS_1), len(MALS_2))
 
@@ -355,6 +417,12 @@ with PdfPages(filename) as pdf:
 
 print('done creating PDF.')
 
+if HALF_SPLIT_MODE == "interleaved":
+    _pseudo_h1 = f"Interleaved A ({INTERLEAVE_BLOCK_SEC:g}s blocks)"
+    _pseudo_h2 = f"Interleaved B ({INTERLEAVE_BLOCK_SEC:g}s blocks)"
+else:
+    _pseudo_h1, _pseudo_h2 = "1st half", "2nd half"
+
 # Significance plots (bootstrap, first/second half, full-session summary)
 create_significance_plots(
     phy_df, ref_frames, cell_types,
@@ -372,6 +440,8 @@ create_significance_plots(
     full_session_MRL, Mrlthresh,
     ebc_angle_bin_size, ebc_dist_bin_size,
     output_base,
+    pseudo_half_label_1=_pseudo_h1,
+    pseudo_half_label_2=_pseudo_h2,
 )
 print('done creating significance plots.')
 

@@ -17,6 +17,7 @@ from egocentric_head import *
 from Egocentric import *
 from scipy.stats import weibull_min
 
+from half_split import dlc_interleaved_masks
 
 
 def process_half(dlc_df_half, columns_of_interest, likelihood_threshold, model_dt, fps, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins):
@@ -147,7 +148,21 @@ def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins, ebc_angle_bin
     return MRLS, MALS, preferred_dist, ebc_plot_data
 
 
-def egocentric_head_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_dt, bin_width, file, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins):
+def egocentric_head_half_check(
+    dlc_df,
+    phy_df,
+    fps,
+    likelihood_threshold,
+    model_dt,
+    bin_width,
+    file,
+    speed_threshold,
+    ebc_angle_bin_size,
+    ebc_dist_bin_size,
+    dist_bins,
+    half_split_mode="interleaved",
+    interleave_block_sec=10.0,
+):
     """
     Perform a half-check analysis on egocentric head-centered data by splitting the data and analyzing each half separately.
 
@@ -172,10 +187,12 @@ def egocentric_head_half_check(dlc_df, phy_df, fps, likelihood_threshold, model_
     # Adding timestamps to dlc file and only considering columns of interest
     dlc_df['time'] = np.arange(len(dlc_df)) / fps #is this working right? is the dt=1/fps? default for arange is 1...
 
-    # Split dlc_df into two halves
-    half_len = len(dlc_df) // 2 
-    dlc_df_1 = dlc_df.iloc[:half_len].copy()
-    dlc_df_2 = dlc_df.iloc[half_len:].copy()
+    # Split dlc_df into two pseudo-halves (contiguous or time-interleaved blocks).
+    n_frames = len(dlc_df)
+    times_s = np.arange(n_frames) / fps
+    mask_a, mask_b = dlc_interleaved_masks(times_s, n_frames, half_split_mode, interleave_block_sec)
+    dlc_df_1 = dlc_df.iloc[mask_a].copy()
+    dlc_df_2 = dlc_df.iloc[mask_b].copy()
 
     # Process each half
     model_data_df_1, model_t1 = process_half(dlc_df_1, columns_of_interest, likelihood_threshold, model_dt, fps, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size, dist_bins)

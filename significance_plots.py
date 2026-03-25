@@ -58,6 +58,8 @@ def create_significance_plots(
     full_session_MRL, Mrlthresh,
     ebc_angle_bin_size, ebc_dist_bin_size,
     output_base,
+    pseudo_half_label_1="1st half",
+    pseudo_half_label_2="2nd half",
 ):
     """
     Create significance_plots.pdf with bootstrap distribution, first/second half comparisons,
@@ -110,7 +112,7 @@ def create_significance_plots(
             ax1.legend()
             ax1.spines[["top", "right"]].set_visible(False)
 
-            # --- Section 2: First vs second half (2x2) ---
+            # --- Section 2: Pseudo-half comparison (contiguous or interleaved blocks) ---
             def make_threshold(data):
                 thresh = np.percentile(data, 75)
                 return np.where(data >= thresh, 1, 0)
@@ -127,7 +129,7 @@ def create_significance_plots(
             pc = ax2.pcolormesh(A, R, half_1, cmap="jet", edgecolors="none", rasterized=True)
             ax2.set_theta_direction(1)
             ax2.set_theta_offset(theta_offset)
-            ax2.set_title(f"1st half | MRL: {MRLS_1[i]:.3f} | MRA: {MALS_1[i]:.3f} | pref_dist: {pref_dist_1[i]:.1f}", fontsize=9)
+            ax2.set_title(f"{pseudo_half_label_1} | MRL: {MRLS_1[i]:.3f} | MRA: {MALS_1[i]:.3f} | pref_dist: {pref_dist_1[i]:.1f}", fontsize=9)
             ax2.axis("off")
             ax2.set_frame_on(False)
             fig.colorbar(pc, ax=ax2)
@@ -138,7 +140,7 @@ def create_significance_plots(
             pc = ax3.pcolormesh(A, R, half_2, cmap="jet", edgecolors="none", rasterized=True)
             ax3.set_theta_direction(1)
             ax3.set_theta_offset(theta_offset)
-            ax3.set_title(f"2nd half | MRL: {MRLS_2[i]:.3f} | MRA: {MALS_2[i]:.3f} | pref_dist: {pref_dist_2[i]:.1f}", fontsize=9)
+            ax3.set_title(f"{pseudo_half_label_2} | MRL: {MRLS_2[i]:.3f} | MRA: {MALS_2[i]:.3f} | pref_dist: {pref_dist_2[i]:.1f}", fontsize=9)
             ax3.axis("off")
             ax3.set_frame_on(False)
             fig.colorbar(pc, ax=ax3)
@@ -152,7 +154,7 @@ def create_significance_plots(
             ax4.plot([0, ang1], [0, rad1], "k-", linewidth=2)
             ax4.set_theta_direction(1)
             ax4.set_theta_offset(theta_offset)
-            ax4.set_title("1st half threshold", fontsize=9)
+            ax4.set_title(f"{pseudo_half_label_1} threshold", fontsize=9)
             ax4.axis("off")
             ax4.set_frame_on(False)
 
@@ -165,7 +167,7 @@ def create_significance_plots(
             ax5.plot([0, ang2], [0, rad2], "k-", linewidth=2)
             ax5.set_theta_direction(1)
             ax5.set_theta_offset(theta_offset)
-            ax5.set_title("2nd half threshold", fontsize=9)
+            ax5.set_title(f"{pseudo_half_label_2} threshold", fontsize=9)
             ax5.axis("off")
             ax5.set_frame_on(False)
 
