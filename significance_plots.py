@@ -122,11 +122,19 @@ def create_significance_plots(
                 return abins[idx[1]], rbins[idx[0]]
 
             A, R = np.meshgrid(abins, rbins)
+            full_vmin = np.nanmin(ebc_data)
+            full_vmax = np.nanmax(ebc_data)
+            if not np.isfinite(full_vmin):
+                full_vmin = 0.0
+            if not np.isfinite(full_vmax):
+                full_vmax = 1.0
+            if full_vmax <= full_vmin:
+                full_vmax = full_vmin + 1e-9
 
             # Half 1 ratemap (style matched to summary_plots.pdf)
             ax2 = fig.add_subplot(gs[1, 0], projection="polar")
             ax2.grid(False)
-            pc = ax2.pcolormesh(A, R, half_1, cmap="jet", edgecolors="none", rasterized=True)
+            pc = ax2.pcolormesh(A, R, half_1, cmap="jet", vmin=full_vmin, vmax=full_vmax, edgecolors="none", rasterized=True)
             ax2.set_theta_direction(1)
             ax2.set_theta_offset(theta_offset)
             ax2.set_title(f"{pseudo_half_label_1} | MRL: {MRLS_1[i]:.3f} | MRA: {MALS_1[i]:.3f} | pref_dist: {pref_dist_1[i]:.1f}", fontsize=9)
@@ -137,7 +145,7 @@ def create_significance_plots(
             # Half 2 ratemap (style matched to summary_plots.pdf)
             ax3 = fig.add_subplot(gs[1, 1], projection="polar")
             ax3.grid(False)
-            pc = ax3.pcolormesh(A, R, half_2, cmap="jet", edgecolors="none", rasterized=True)
+            pc = ax3.pcolormesh(A, R, half_2, cmap="jet", vmin=full_vmin, vmax=full_vmax, edgecolors="none", rasterized=True)
             ax3.set_theta_direction(1)
             ax3.set_theta_offset(theta_offset)
             ax3.set_title(f"{pseudo_half_label_2} | MRL: {MRLS_2[i]:.3f} | MRA: {MALS_2[i]:.3f} | pref_dist: {pref_dist_2[i]:.1f}", fontsize=9)
@@ -174,7 +182,7 @@ def create_significance_plots(
             # --- Section 3: Summary (full session) ---
             ax6 = fig.add_subplot(gs[3, 0], projection="polar")
             ax6.grid(False)
-            pc = ax6.pcolormesh(A, R, ebc_data, cmap="jet", edgecolors="none", rasterized=True)
+            pc = ax6.pcolormesh(A, R, ebc_data, cmap="jet", vmin=full_vmin, vmax=full_vmax, edgecolors="none", rasterized=True)
             ax6.set_theta_direction(1)
             ax6.set_theta_offset(theta_offset)
             ax6.set_title(f"Full session | MRL: {MRL:.3f} | MRA: {MAL:.3f} | pref_dist: {pref_dist:.1f}", fontsize=9)
