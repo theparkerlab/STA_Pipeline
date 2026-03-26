@@ -38,7 +38,7 @@ from significance_plots import create_significance_plots
 
 # TEST MODE: set to True to process only the first N cells and save outputs
 # into a "test" subdirectory (for faster trial runs).
-TEST_MODE = True   # True = first 10 cells, save in test/; False = all cells, normal paths
+TEST_MODE = False   # True = first 10 cells, save in test/; False = all cells, normal paths
 MAX_TEST_CELLS = 10
 
 # File-finding function
