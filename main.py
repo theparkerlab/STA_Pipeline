@@ -274,8 +274,7 @@ cell_types = classify_cell(
     MALS_2,
     pref_dist_1,
     pref_dist_2,
-    Mrlthresh_half1,
-    Mrlthresh_half2,
+    Mrlthresh
 )
 
 # Round analysis results for readability

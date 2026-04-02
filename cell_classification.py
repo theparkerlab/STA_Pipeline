@@ -9,8 +9,7 @@ def classify_cell(
     MALS_2,
     pref_dist_1,
     pref_dist_2,
-    Mrlthresh_1,
-    Mrlthresh_2,
+    Mrlthresh,
     debug: bool = True,
     debug_first_n: int = 10,
 ):
@@ -41,9 +40,9 @@ def classify_cell(
         # removing this condition for now since some cells have very low firing rates but still show strong tuning, can add back in later if needed PRLP 03/20/2026
         # condition_1 = firing_rate > 0.1
             
-        # Condition 2: MRL in both halves exceeds (half-specific) thresholds
-        condition_2_1 = MRLS_1[i] > Mrlthresh_1[i]
-        condition_2_2 = MRLS_2[i] > Mrlthresh_2[i]
+        # Condition 2: MRL in both halves exceeds (half-specific) thresholds #NO, phil changed this to compare against overal MRLthresh as in Hinman 03/31/2026
+        condition_2_1 = MRLS_1[i] > Mrlthresh[i]#_1[i]
+        condition_2_2 = MRLS_2[i] > Mrlthresh[i]#_2[i]
         condition_2 = condition_2_1 and condition_2_2
 
         # (3) The change in Mean Resultant Angle (MRA) between the 1st and 2nd half was <45°
@@ -68,7 +67,7 @@ def classify_cell(
                 failed = []
                 if not condition_2:
                     failed.append(
-                        f"cond2 (half1 {MRLS_1[i]:.3f}>{Mrlthresh_1[i]:.3f}, half2 {MRLS_2[i]:.3f}>{Mrlthresh_2[i]:.3f})"
+                        f"cond2 (half1 {MRLS_1[i]:.3f}>{Mrlthresh[i]:.3f}, half2 {MRLS_2[i]:.3f}>{Mrlthresh[i]:.3f})"
                     )
                 if not condition_3:
                     failed.append(f"cond3 (MRA delta={change_in_MRA:.1f} deg)")

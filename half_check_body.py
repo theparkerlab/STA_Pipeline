@@ -14,11 +14,34 @@ import cv2
 
 from utils import set_to_nan_based_on_likelihood, plot_ebc, filter_and_interpolate
 from Egocentric import *
-from scipy.stats import weibull_min
+# from scipy.stats import weibull_min
+from scipy.optimize import curve_fit
 
 from half_split import dlc_interleaved_masks
 
+def _weibull_with_baseline(x, c, a, k, lam):
+    """Baseline + scaled Weibull so fit can be high at x=0 (Weibull PDF is zero at origin)."""
+    x_safe = np.maximum(x.astype(float), 1e-6)
+    w = (k / lam) * ((x_safe / lam) ** (k - 1)) * np.exp(-((x_safe / lam) ** k))
+    return c + a * w
 
+
+def _fit_weibull(x, y):
+    """Fit baseline + scaled Weibull to firing rate vs distance. Returns (fit_success, y_fit) or (False, None)."""
+    try:
+        max_y = np.nanmax(y)
+        min_y = np.nanmin(y)
+        if max_y <= 0 or len(x) < 4:
+            return False, None
+        # Initial baseline ~ value at first bin; peak amplitude; shape/scale
+        p0 = (float(y.flat[0]) if y.size else 0, max_y - min_y, 2.0, np.median(x[x > 0]) if np.any(x > 0) else 50.0)
+        bounds = ([0, 0, 0.5, 1e-6], [max_y * 2, max_y * 500, 10, np.max(x) * 2])
+        popt, _ = curve_fit(_weibull_with_baseline, x, y, p0=p0, bounds=bounds, maxfev=3000) # this is implemented differently in the rest of the code, might want to unify PRLP 03/20/2026
+        y_fit = _weibull_with_baseline(x, *popt)
+        return True, y_fit
+    except Exception:
+        return False, None
+    
 def process_half(dlc_df_half, columns_of_interest, likelihood_threshold, model_dt, fps, speed_threshold, ebc_angle_bin_size, ebc_dist_bin_size):
     """
     Process a half of the dlc DataFrame to filter, interpolate, and calculate egocentric body-centered (EBC) data.
@@ -133,12 +156,14 @@ def calc_mrls(model_data_df, phy_df, cell_numbers, model_t, abins, ebc_angle_bin
         # max_firing_distance_bin = np.argmax(firing_rate_vector)
 
         # Fit a Weibull distribution
-        params = weibull_min.fit(firing_rate_vector)
+        fit_ok, y_fit = _fit_weibull(np.arange(len(firing_rate_vector)), firing_rate_vector)
+        peak_idx = np.argmax(y_fit) if fit_ok else np.argmax(firing_rate_vector)
+        preferred_dist.append(peak_idx)
 
-        # Get the distance bin with the maximum estimated firing rate
-        max_firing_distance_bin = np.argmax(weibull_min.pdf(np.arange(m), *params))  #not fitting correctly, turned off PRLP 7/28/25
-
-        preferred_dist.append(max_firing_distance_bin)
+        #old weibull fit (not working well, turned off PRLP 03/27/2026)
+        # params = weibull_min.fit(firing_rate_vector)
+        # # Get the distance bin with the maximum estimated firing rate
+        # max_firing_distance_bin = np.argmax(weibull_min.pdf(np.arange(m), *params)) #not fitting correctly, turned off PRLP 7/28/25
     return MRLS, MALS, preferred_dist, ebc_plot_data
 
 
